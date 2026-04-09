@@ -6,6 +6,7 @@ import { initDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import giftSettingsRoutes from './routes/gift-settings.js';
+import userRoutes from './routes/users.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -21,6 +22,7 @@ initDb();
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/gift-settings', giftSettingsRoutes);
+app.use('/api/users', userRoutes);
 
 // Serve frontend static files (production)
 app.use(express.static(path.join(__dirname, '..', 'dist')));

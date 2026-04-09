@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useAuth } from '../context/AuthContext';
 import { useGiftSettings } from '../context/GiftSettingsContext';
+import { apiGet, apiPost, apiPut, apiDelete } from '../lib/api';
 import { categories } from '../data/products';
 
 const emptyProduct = {
@@ -134,7 +135,7 @@ function TagPicker({ form, setForm, settings, inputClass }) {
 
 export default function Admin() {
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin } = useAuth();
   const { settings, updateSettings } = useGiftSettings();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('products');
@@ -148,6 +149,37 @@ export default function Admin() {
   const [settingsForm, setSettingsForm] = useState(null);
   const [settingsError, setSettingsError] = useState('');
   const [settingsSaving, setSettingsSaving] = useState(false);
+
+  // User management state
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userError, setUserError] = useState('');
+  const [userSaving, setUserSaving] = useState(false);
+  const [editingUser, setEditingUser] = useState(null); // null | 'new' | userId
+  const [userForm, setUserForm] = useState(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
+
+  const ROLES = [
+    { value: 'super_admin', label: 'Super Admin' },
+    { value: 'admin', label: 'Admin' },
+    { value: 'editor', label: 'Editor' },
+  ];
+
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const data = await apiGet('/users');
+      setUsers(data);
+    } catch (err) {
+      setUserError(err.message);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isSuperAdmin) fetchUsers();
+  }, [isSuperAdmin, fetchUsers]);
 
   const handleLogout = () => {
     logout();
@@ -353,6 +385,55 @@ export default function Admin() {
     }
   };
 
+  // ---- User Management Handlers ----
+  const startAddUser = () => {
+    setEditingUser('new');
+    setUserForm({ username: '', password: '', role: 'editor' });
+    setUserError('');
+  };
+
+  const startEditUser = (u) => {
+    setEditingUser(u.id);
+    setUserForm({ username: u.username, password: '', role: u.role });
+    setUserError('');
+  };
+
+  const cancelUser = () => {
+    setEditingUser(null);
+    setUserForm(null);
+    setUserError('');
+  };
+
+  const saveUser = async () => {
+    setUserError('');
+    setUserSaving(true);
+    try {
+      if (editingUser === 'new') {
+        await apiPost('/users', userForm);
+      } else {
+        const body = { username: userForm.username, role: userForm.role };
+        if (userForm.password) body.password = userForm.password;
+        await apiPut(`/users/${editingUser}`, body);
+      }
+      cancelUser();
+      await fetchUsers();
+    } catch (err) {
+      setUserError(err.message || 'Failed to save user');
+    } finally {
+      setUserSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    try {
+      await apiDelete(`/users/${id}`);
+      setConfirmDeleteUser(null);
+      await fetchUsers();
+    } catch (err) {
+      setUserError(err.message || 'Failed to delete user');
+    }
+  };
+
   const inputClass = 'px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary';
   const btnPrimary = 'px-5 py-2 bg-primary text-white font-medium text-sm rounded-lg hover:bg-primary-dark cursor-pointer transition-colors border-none disabled:opacity-50';
   const btnSecondary = 'px-5 py-2 bg-gray-100 text-text-muted font-medium text-sm rounded-lg hover:bg-gray-200 cursor-pointer transition-colors border-none';
@@ -376,10 +457,11 @@ export default function Admin() {
           {[
             { key: 'products', label: 'Products' },
             { key: 'gift', label: 'Gift Settings' },
+            ...(isSuperAdmin ? [{ key: 'users', label: 'Users' }] : []),
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => { setActiveTab(tab.key); cancel(); cancelSettings(); }}
+              onClick={() => { setActiveTab(tab.key); cancel(); cancelSettings(); cancelUser(); }}
               className={`px-4 py-2 text-sm font-medium rounded-md cursor-pointer border-none transition-colors ${
                 activeTab === tab.key
                   ? 'bg-white text-text shadow-sm'
@@ -745,6 +827,120 @@ export default function Admin() {
                   </button>
                   <button onClick={cancelSettings} className={btnSecondary}>Cancel</button>
                 </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== USERS TAB ==================== */}
+        {activeTab === 'users' && isSuperAdmin && (
+          <>
+            <div className="flex justify-end mb-4">
+              {!editingUser && <button onClick={startAddUser} className={btnPrimary}>+ Add User</button>}
+            </div>
+
+            {userError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{userError}</div>
+            )}
+
+            {/* Add / Edit User Form */}
+            {userForm && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+                <h3 className="font-semibold text-text mb-4">{editingUser === 'new' ? 'Add New User' : 'Edit User'}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Username</label>
+                    <input
+                      type="text"
+                      value={userForm.username}
+                      onChange={(e) => setUserForm((prev) => ({ ...prev, username: e.target.value }))}
+                      className={'w-full ' + inputClass}
+                      placeholder="Username (min 3 chars)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">
+                      Password{editingUser !== 'new' && ' (leave blank to keep)'}
+                    </label>
+                    <input
+                      type="password"
+                      value={userForm.password}
+                      onChange={(e) => setUserForm((prev) => ({ ...prev, password: e.target.value }))}
+                      className={'w-full ' + inputClass}
+                      placeholder={editingUser === 'new' ? 'Min 6 characters' : 'Leave blank to keep current'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Role</label>
+                    <select
+                      value={userForm.role}
+                      onChange={(e) => setUserForm((prev) => ({ ...prev, role: e.target.value }))}
+                      className={'w-full ' + inputClass}
+                    >
+                      {ROLES.map((r) => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={saveUser} disabled={userSaving} className={btnPrimary}>
+                    {userSaving ? 'Saving...' : editingUser === 'new' ? 'Create User' : 'Update User'}
+                  </button>
+                  <button onClick={cancelUser} className={btnSecondary}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {/* Users List */}
+            {usersLoading ? (
+              <p className="text-text-muted text-sm">Loading users...</p>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-text-muted text-left">
+                      <th className="px-4 py-3 font-medium">ID</th>
+                      <th className="px-4 py-3 font-medium">Username</th>
+                      <th className="px-4 py-3 font-medium">Role</th>
+                      <th className="px-4 py-3 font-medium">Created</th>
+                      <th className="px-4 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-t border-gray-100">
+                        <td className="px-4 py-3 text-text-muted">{u.id}</td>
+                        <td className="px-4 py-3 font-medium text-text">{u.username}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            u.role === 'super_admin' ? 'bg-purple-100 text-purple-700' :
+                            u.role === 'admin' ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {ROLES.find((r) => r.value === u.role)?.label || u.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-text-muted">{new Date(u.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => startEditUser(u)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>
+                            {u.id !== user.id && (
+                              confirmDeleteUser === u.id ? (
+                                <div className="flex gap-1">
+                                  <button onClick={() => handleDeleteUser(u.id)} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 cursor-pointer border-none transition-colors">Confirm</button>
+                                  <button onClick={() => setConfirmDeleteUser(null)} className="px-3 py-1.5 text-xs font-medium text-text-muted bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer border-none transition-colors">Cancel</button>
+                                </div>
+                              ) : (
+                                <button onClick={() => setConfirmDeleteUser(u.id)} className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Delete</button>
+                              )
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </>

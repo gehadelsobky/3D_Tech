@@ -49,8 +49,8 @@ export function initDb() {
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount.count === 0) {
     const hash = bcrypt.hashSync('admin123', 10);
-    db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)').run('admin', hash, 'admin');
-    console.log('Default admin user created (username: admin, password: admin123)');
+    db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)').run('admin', hash, 'super_admin');
+    console.log('Default super admin user created (username: admin, password: admin123)');
   }
 
   const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get();

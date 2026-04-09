@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin: user?.role === 'admin', loading }}>
+    <AuthContext.Provider value={{ user, login, logout, isAdmin: ['admin', 'super_admin'].includes(user?.role), isSuperAdmin: user?.role === 'super_admin', loading }}>
       {children}
     </AuthContext.Provider>
   );
