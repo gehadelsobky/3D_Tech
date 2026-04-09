@@ -135,7 +135,7 @@ function TagPicker({ form, setForm, settings, inputClass }) {
 
 export default function Admin() {
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
-  const { user, logout, isSuperAdmin } = useAuth();
+  const { user, logout, hasPermission, isSuperAdmin, changePassword, updateProfile, refreshUser } = useAuth();
   const { settings, updateSettings } = useGiftSettings();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('products');
@@ -152,18 +152,29 @@ export default function Admin() {
 
   // User management state
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userError, setUserError] = useState('');
   const [userSaving, setUserSaving] = useState(false);
-  const [editingUser, setEditingUser] = useState(null); // null | 'new' | userId
+  const [editingUser, setEditingUser] = useState(null);
   const [userForm, setUserForm] = useState(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
 
-  const ROLES = [
-    { value: 'super_admin', label: 'Super Admin' },
-    { value: 'admin', label: 'Admin' },
-    { value: 'editor', label: 'Editor' },
-  ];
+  // Roles management state
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [roleError, setRoleError] = useState('');
+  const [roleSaving, setRoleSaving] = useState(false);
+  const [editingRole, setEditingRole] = useState(null);
+  const [roleForm, setRoleForm] = useState(null);
+  const [permGroups, setPermGroups] = useState([]);
+  const [confirmDeleteRole, setConfirmDeleteRole] = useState(null);
+
+  // My Account state
+  const [showAccount, setShowAccount] = useState(false);
+  const [accountForm, setAccountForm] = useState({ email: '', currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [accountError, setAccountError] = useState('');
+  const [accountSuccess, setAccountSuccess] = useState('');
+  const [accountSaving, setAccountSaving] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -177,9 +188,29 @@ export default function Admin() {
     }
   }, []);
 
+  const fetchRoles = useCallback(async () => {
+    setRolesLoading(true);
+    try {
+      const data = await apiGet('/roles');
+      setRoles(data);
+    } catch (err) {
+      setRoleError(err.message);
+    } finally {
+      setRolesLoading(false);
+    }
+  }, []);
+
+  const fetchPermGroups = useCallback(async () => {
+    try {
+      const data = await apiGet('/roles/permissions');
+      setPermGroups(data.groups || []);
+    } catch { /* ignore if no access */ }
+  }, []);
+
   useEffect(() => {
-    if (isSuperAdmin) fetchUsers();
-  }, [isSuperAdmin, fetchUsers]);
+    if (hasPermission('users.view')) { fetchUsers(); fetchRoles(); }
+    if (hasPermission('roles.manage')) { fetchRoles(); fetchPermGroups(); }
+  }, [hasPermission, fetchUsers, fetchRoles, fetchPermGroups]);
 
   const handleLogout = () => {
     logout();
@@ -388,13 +419,14 @@ export default function Admin() {
   // ---- User Management Handlers ----
   const startAddUser = () => {
     setEditingUser('new');
-    setUserForm({ username: '', password: '', role: 'editor' });
+    const defaultRole = roles.find(r => r.slug === 'editor') || roles[0];
+    setUserForm({ username: '', email: '', password: '', role_id: defaultRole?.id || '' });
     setUserError('');
   };
 
   const startEditUser = (u) => {
     setEditingUser(u.id);
-    setUserForm({ username: u.username, password: '', role: u.role });
+    setUserForm({ username: u.username, email: u.email || '', password: '', role_id: u.role_id });
     setUserError('');
   };
 
@@ -411,7 +443,7 @@ export default function Admin() {
       if (editingUser === 'new') {
         await apiPost('/users', userForm);
       } else {
-        const body = { username: userForm.username, role: userForm.role };
+        const body = { username: userForm.username, email: userForm.email, role_id: userForm.role_id };
         if (userForm.password) body.password = userForm.password;
         await apiPut(`/users/${editingUser}`, body);
       }
@@ -434,6 +466,119 @@ export default function Admin() {
     }
   };
 
+  // ---- Roles Management Handlers ----
+  const startAddRole = () => {
+    setEditingRole('new');
+    setRoleForm({ name: '', permissions: [] });
+    setRoleError('');
+  };
+
+  const startEditRole = (r) => {
+    setEditingRole(r.id);
+    setRoleForm({ name: r.name, permissions: [...r.permissions] });
+    setRoleError('');
+  };
+
+  const cancelRole = () => {
+    setEditingRole(null);
+    setRoleForm(null);
+    setRoleError('');
+  };
+
+  const toggleRolePerm = (perm) => {
+    setRoleForm((prev) => {
+      const perms = prev.permissions.includes(perm)
+        ? prev.permissions.filter(p => p !== perm)
+        : [...prev.permissions, perm];
+      return { ...prev, permissions: perms };
+    });
+  };
+
+  const selectAllPerms = () => {
+    const all = permGroups.flatMap(g => g.permissions.map(p => p.key));
+    setRoleForm((prev) => ({ ...prev, permissions: all }));
+  };
+
+  const deselectAllPerms = () => {
+    setRoleForm((prev) => ({ ...prev, permissions: [] }));
+  };
+
+  const saveRole = async () => {
+    setRoleError('');
+    setRoleSaving(true);
+    try {
+      if (editingRole === 'new') {
+        await apiPost('/roles', roleForm);
+      } else {
+        await apiPut(`/roles/${editingRole}`, roleForm);
+      }
+      cancelRole();
+      await fetchRoles();
+      // Refresh own user in case our permissions changed
+      await refreshUser();
+    } catch (err) {
+      setRoleError(err.message || 'Failed to save role');
+    } finally {
+      setRoleSaving(false);
+    }
+  };
+
+  const handleDeleteRole = async (id) => {
+    try {
+      await apiDelete(`/roles/${id}`);
+      setConfirmDeleteRole(null);
+      await fetchRoles();
+    } catch (err) {
+      setRoleError(err.message || 'Failed to delete role');
+    }
+  };
+
+  // ---- My Account Handlers ----
+  const openAccount = () => {
+    setShowAccount(true);
+    setAccountForm({ email: user?.email || '', currentPassword: '', newPassword: '', confirmPassword: '' });
+    setAccountError('');
+    setAccountSuccess('');
+  };
+
+  const closeAccount = () => {
+    setShowAccount(false);
+    setAccountError('');
+    setAccountSuccess('');
+  };
+
+  const saveAccount = async () => {
+    setAccountError('');
+    setAccountSuccess('');
+    setAccountSaving(true);
+    try {
+      // Update email if changed
+      if (accountForm.email !== (user?.email || '')) {
+        await updateProfile({ email: accountForm.email });
+      }
+      // Change password if provided
+      if (accountForm.newPassword) {
+        if (accountForm.newPassword !== accountForm.confirmPassword) {
+          setAccountError('New passwords do not match');
+          setAccountSaving(false);
+          return;
+        }
+        if (!accountForm.currentPassword) {
+          setAccountError('Current password is required');
+          setAccountSaving(false);
+          return;
+        }
+        await changePassword(accountForm.currentPassword, accountForm.newPassword);
+      }
+      setAccountSuccess('Account updated successfully');
+      setAccountForm(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+    } catch (err) {
+      setAccountError(err.message || 'Failed to update account');
+    } finally {
+      setAccountSaving(false);
+    }
+  };
+
   const inputClass = 'px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary';
   const btnPrimary = 'px-5 py-2 bg-primary text-white font-medium text-sm rounded-lg hover:bg-primary-dark cursor-pointer transition-colors border-none disabled:opacity-50';
   const btnSecondary = 'px-5 py-2 bg-gray-100 text-text-muted font-medium text-sm rounded-lg hover:bg-gray-200 cursor-pointer transition-colors border-none';
@@ -444,24 +589,67 @@ export default function Admin() {
     <main className="bg-surface min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-text">Admin Panel</h1>
-            <p className="text-text-muted text-sm mt-1">Logged in as <span className="font-medium">{user?.username}</span></p>
+            <p className="text-text-muted text-sm mt-1">
+              Logged in as <span className="font-medium">{user?.username}</span>
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-text-muted">{user?.role_name}</span>
+            </p>
           </div>
-          <button onClick={handleLogout} className={btnSecondary}>Logout</button>
+          <div className="flex gap-2">
+            <button onClick={openAccount} className={btnSecondary}>My Account</button>
+            <button onClick={handleLogout} className={btnSecondary}>Logout</button>
+          </div>
         </div>
 
+        {/* My Account Panel */}
+        {showAccount && (
+          <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-text">My Account</h3>
+              <button onClick={closeAccount} className="text-text-muted hover:text-text bg-transparent border-none cursor-pointer text-lg">&times;</button>
+            </div>
+            {accountError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{accountError}</div>}
+            {accountSuccess && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{accountSuccess}</div>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1">Email</label>
+                <input type="email" value={accountForm.email} onChange={(e) => setAccountForm(prev => ({ ...prev, email: e.target.value }))} className={'w-full ' + inputClass} placeholder="your@email.com" />
+              </div>
+              <div></div>
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1">Current Password</label>
+                <input type="password" value={accountForm.currentPassword} onChange={(e) => setAccountForm(prev => ({ ...prev, currentPassword: e.target.value }))} className={'w-full ' + inputClass} placeholder="Required to change password" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1">New Password</label>
+                <input type="password" value={accountForm.newPassword} onChange={(e) => setAccountForm(prev => ({ ...prev, newPassword: e.target.value }))} className={'w-full ' + inputClass} placeholder="Min 6 characters" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1">Confirm New Password</label>
+                <input type="password" value={accountForm.confirmPassword} onChange={(e) => setAccountForm(prev => ({ ...prev, confirmPassword: e.target.value }))} className={'w-full ' + inputClass} placeholder="Repeat new password" />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={saveAccount} disabled={accountSaving} className={btnPrimary}>{accountSaving ? 'Saving...' : 'Save Changes'}</button>
+              <button onClick={closeAccount} className={btnSecondary}>Cancel</button>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
+        <div className="flex flex-wrap gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
           {[
-            { key: 'products', label: 'Products' },
-            { key: 'gift', label: 'Gift Settings' },
-            ...(isSuperAdmin ? [{ key: 'users', label: 'Users' }] : []),
-          ].map((tab) => (
+            hasPermission('products.view') && { key: 'products', label: 'Products' },
+            hasPermission('gift_settings.view') && { key: 'gift', label: 'Gift Settings' },
+            hasPermission('users.view') && { key: 'users', label: 'Users' },
+            hasPermission('roles.manage') && { key: 'roles', label: 'Roles' },
+          ].filter(Boolean).map((tab) => (
             <button
               key={tab.key}
-              onClick={() => { setActiveTab(tab.key); cancel(); cancelSettings(); cancelUser(); }}
+              onClick={() => { setActiveTab(tab.key); cancel(); cancelSettings(); cancelUser(); cancelRole(); }}
               className={`px-4 py-2 text-sm font-medium rounded-md cursor-pointer border-none transition-colors ${
                 activeTab === tab.key
                   ? 'bg-white text-text shadow-sm'
@@ -477,7 +665,7 @@ export default function Admin() {
         {activeTab === 'products' && (
           <>
             <div className="flex justify-end mb-4">
-              {!editing && <button onClick={startAdd} className={btnPrimary}>+ Add Product</button>}
+              {!editing && hasPermission('products.create') && <button onClick={startAdd} className={btnPrimary}>+ Add Product</button>}
             </div>
 
             {error && (
@@ -579,15 +767,15 @@ export default function Admin() {
                       <div className="text-xs text-text-muted capitalize">{product.category} &middot; MOQ: {product.moq} &middot; {product.priceRange}</div>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <button onClick={() => startEdit(product)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>
-                      {confirmDelete === product.id ? (
+                      {hasPermission('products.edit') && <button onClick={() => startEdit(product)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>}
+                      {hasPermission('products.delete') && (confirmDelete === product.id ? (
                         <div className="flex gap-1">
                           <button onClick={() => handleDelete(product.id)} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 cursor-pointer border-none transition-colors">Confirm</button>
                           <button onClick={() => setConfirmDelete(null)} className="px-3 py-1.5 text-xs font-medium text-text-muted bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer border-none transition-colors">Cancel</button>
                         </div>
                       ) : (
                         <button onClick={() => setConfirmDelete(product.id)} className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Delete</button>
-                      )}
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -606,7 +794,7 @@ export default function Admin() {
             {!settingsForm ? (
               <div className="space-y-6">
                 <div className="flex justify-end">
-                  <button onClick={startEditSettings} className={btnPrimary}>Edit Settings</button>
+                  {hasPermission('gift_settings.edit') && <button onClick={startEditSettings} className={btnPrimary}>Edit Settings</button>}
                 </div>
 
                 {/* Gift Types + Tags */}
@@ -833,10 +1021,10 @@ export default function Admin() {
         )}
 
         {/* ==================== USERS TAB ==================== */}
-        {activeTab === 'users' && isSuperAdmin && (
+        {activeTab === 'users' && hasPermission('users.view') && (
           <>
             <div className="flex justify-end mb-4">
-              {!editingUser && <button onClick={startAddUser} className={btnPrimary}>+ Add User</button>}
+              {!editingUser && hasPermission('users.create') && <button onClick={startAddUser} className={btnPrimary}>+ Add User</button>}
             </div>
 
             {userError && (
@@ -847,38 +1035,26 @@ export default function Admin() {
             {userForm && (
               <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
                 <h3 className="font-semibold text-text mb-4">{editingUser === 'new' ? 'Add New User' : 'Edit User'}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-text-muted mb-1">Username</label>
-                    <input
-                      type="text"
-                      value={userForm.username}
-                      onChange={(e) => setUserForm((prev) => ({ ...prev, username: e.target.value }))}
-                      className={'w-full ' + inputClass}
-                      placeholder="Username (min 3 chars)"
-                    />
+                    <input type="text" value={userForm.username} onChange={(e) => setUserForm((prev) => ({ ...prev, username: e.target.value }))} className={'w-full ' + inputClass} placeholder="Username (min 3 chars)" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Email</label>
+                    <input type="email" value={userForm.email} onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))} className={'w-full ' + inputClass} placeholder="user@example.com" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-text-muted mb-1">
                       Password{editingUser !== 'new' && ' (leave blank to keep)'}
                     </label>
-                    <input
-                      type="password"
-                      value={userForm.password}
-                      onChange={(e) => setUserForm((prev) => ({ ...prev, password: e.target.value }))}
-                      className={'w-full ' + inputClass}
-                      placeholder={editingUser === 'new' ? 'Min 6 characters' : 'Leave blank to keep current'}
-                    />
+                    <input type="password" value={userForm.password} onChange={(e) => setUserForm((prev) => ({ ...prev, password: e.target.value }))} className={'w-full ' + inputClass} placeholder={editingUser === 'new' ? 'Min 6 characters' : 'Leave blank to keep current'} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-text-muted mb-1">Role</label>
-                    <select
-                      value={userForm.role}
-                      onChange={(e) => setUserForm((prev) => ({ ...prev, role: e.target.value }))}
-                      className={'w-full ' + inputClass}
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
+                    <select value={userForm.role_id} onChange={(e) => setUserForm((prev) => ({ ...prev, role_id: Number(e.target.value) }))} className={'w-full ' + inputClass}>
+                      {roles.filter(r => isSuperAdmin || !r.is_system).map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}{r.is_system ? ' (System)' : ''}</option>
                       ))}
                     </select>
                   </div>
@@ -902,6 +1078,7 @@ export default function Admin() {
                     <tr className="bg-gray-50 text-text-muted text-left">
                       <th className="px-4 py-3 font-medium">ID</th>
                       <th className="px-4 py-3 font-medium">Username</th>
+                      <th className="px-4 py-3 font-medium">Email</th>
                       <th className="px-4 py-3 font-medium">Role</th>
                       <th className="px-4 py-3 font-medium">Created</th>
                       <th className="px-4 py-3 font-medium text-right">Actions</th>
@@ -912,20 +1089,19 @@ export default function Admin() {
                       <tr key={u.id} className="border-t border-gray-100">
                         <td className="px-4 py-3 text-text-muted">{u.id}</td>
                         <td className="px-4 py-3 font-medium text-text">{u.username}</td>
+                        <td className="px-4 py-3 text-text-muted">{u.email || '—'}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            u.role === 'super_admin' ? 'bg-purple-100 text-purple-700' :
-                            u.role === 'admin' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
+                            u.role_is_system ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {ROLES.find((r) => r.value === u.role)?.label || u.role}
+                            {u.role_name}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-text-muted">{new Date(u.created_at).toLocaleDateString()}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex gap-2 justify-end">
-                            <button onClick={() => startEditUser(u)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>
-                            {u.id !== user.id && (
+                            {hasPermission('users.edit') && <button onClick={() => startEditUser(u)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>}
+                            {hasPermission('users.delete') && u.id !== user.id && (
                               confirmDeleteUser === u.id ? (
                                 <div className="flex gap-1">
                                   <button onClick={() => handleDeleteUser(u.id)} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 cursor-pointer border-none transition-colors">Confirm</button>
@@ -941,6 +1117,118 @@ export default function Admin() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== ROLES TAB ==================== */}
+        {activeTab === 'roles' && hasPermission('roles.manage') && (
+          <>
+            <div className="flex justify-end mb-4">
+              {!editingRole && <button onClick={startAddRole} className={btnPrimary}>+ Add Role</button>}
+            </div>
+
+            {roleError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{roleError}</div>
+            )}
+
+            {/* Add / Edit Role Form */}
+            {roleForm && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+                <h3 className="font-semibold text-text mb-4">{editingRole === 'new' ? 'Add New Role' : 'Edit Role'}</h3>
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-text-muted mb-1">Role Name</label>
+                  <input type="text" value={roleForm.name} onChange={(e) => setRoleForm((prev) => ({ ...prev, name: e.target.value }))} className={'w-full max-w-sm ' + inputClass} placeholder="e.g. Content Editor" />
+                </div>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-xs font-medium text-text-muted">Permissions</label>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={selectAllPerms} className={addBtn}>Select All</button>
+                      <span className="text-text-muted text-xs">|</span>
+                      <button type="button" onClick={deselectAllPerms} className={addBtn}>Deselect All</button>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {permGroups.map((group) => (
+                      <div key={group.label} className={`p-3 rounded-lg ${group.soon ? 'bg-gray-50 opacity-60' : 'bg-surface'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-text">{group.label}</span>
+                          {group.soon && <span className="text-[10px] px-1.5 py-0.5 bg-gray-200 text-text-muted rounded">Coming soon</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {group.permissions.map((perm) => {
+                            const checked = roleForm.permissions.includes(perm.key);
+                            return (
+                              <label key={perm.key} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs cursor-pointer border transition-colors ${
+                                checked ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-gray-200 text-text-muted hover:border-gray-300'
+                              } ${group.soon ? 'pointer-events-none' : ''}`}>
+                                <input type="checkbox" checked={checked} onChange={() => toggleRolePerm(perm.key)} className="sr-only" disabled={group.soon} />
+                                {perm.label}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={saveRole} disabled={roleSaving} className={btnPrimary}>
+                    {roleSaving ? 'Saving...' : editingRole === 'new' ? 'Create Role' : 'Update Role'}
+                  </button>
+                  <button onClick={cancelRole} className={btnSecondary}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {/* Roles List */}
+            {rolesLoading ? (
+              <p className="text-text-muted text-sm">Loading roles...</p>
+            ) : (
+              <div className="space-y-3">
+                {roles.map((r) => (
+                  <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-text">{r.name}</h4>
+                          {r.is_system ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">System Role</span>
+                          ) : null}
+                          <span className="text-xs text-text-muted">{r.userCount} user{r.userCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {!r.is_system && (
+                          <>
+                            <button onClick={() => startEditRole(r)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>
+                            {confirmDeleteRole === r.id ? (
+                              <div className="flex gap-1">
+                                <button onClick={() => handleDeleteRole(r.id)} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 cursor-pointer border-none transition-colors">Confirm</button>
+                                <button onClick={() => setConfirmDeleteRole(null)} className="px-3 py-1.5 text-xs font-medium text-text-muted bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer border-none transition-colors">Cancel</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteRole(r.id)} className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Delete</button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {r.is_system ? (
+                        <span className="px-2 py-0.5 bg-purple-50 text-purple-600 text-xs rounded-full">All Permissions</span>
+                      ) : r.permissions.length > 0 ? (
+                        r.permissions.map((p) => (
+                          <span key={p} className="px-2 py-0.5 bg-blue-50 text-accent text-xs rounded-full">{p}</span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-text-muted italic">No permissions</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </>

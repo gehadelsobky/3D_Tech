@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../lib/api';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiGet, apiPost, apiPut } from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -30,8 +30,36 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const hasPermission = useCallback((perm) => {
+    return user?.permissions?.includes(perm) || false;
+  }, [user]);
+
+  const changePassword = async (currentPassword, newPassword) => {
+    await apiPut('/auth/password', { currentPassword, newPassword });
+  };
+
+  const updateProfile = async (data) => {
+    const updated = await apiPut('/auth/profile', data);
+    setUser(updated);
+  };
+
+  const refreshUser = async () => {
+    const data = await apiGet('/auth/me');
+    setUser(data);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin: ['admin', 'super_admin'].includes(user?.role), isSuperAdmin: user?.role === 'super_admin', loading }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      logout,
+      hasPermission,
+      isSuperAdmin: !!user?.is_system,
+      loading,
+      changePassword,
+      updateProfile,
+      refreshUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );

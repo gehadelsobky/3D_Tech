@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/products (admin only)
-router.post('/', authenticate, requireAdmin, (req, res) => {
+router.post('/', authenticate, requirePermission('products.create'), (req, res) => {
   const data = req.body;
   const result = db.prepare(`
     INSERT INTO products (name, category, images, description, features, branding_options, moq, lead_time, price_range, price_min, price_max, lead_days, tags, notes)
@@ -67,7 +67,7 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
 });
 
 // PUT /api/products/:id (admin only)
-router.put('/:id', authenticate, requireAdmin, (req, res) => {
+router.put('/:id', authenticate, requirePermission('products.edit'), (req, res) => {
   const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: 'Product not found' });
@@ -104,7 +104,7 @@ router.put('/:id', authenticate, requireAdmin, (req, res) => {
 });
 
 // DELETE /api/products/:id (admin only)
-router.delete('/:id', authenticate, requireAdmin, (req, res) => {
+router.delete('/:id', authenticate, requirePermission('products.delete'), (req, res) => {
   const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: 'Product not found' });

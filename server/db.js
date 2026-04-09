@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { ALL_PERMISSIONS } from './permissions.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const db = new Database(join(__dirname, 'data.db'));
@@ -10,15 +11,8 @@ const db = new Database(join(__dirname, 'data.db'));
 db.pragma('journal_mode = WAL');
 
 export function initDb() {
+  // ---- Core tables (unchanged) ----
   db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'admin',
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -43,27 +37,124 @@ export function initDb() {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       settings TEXT NOT NULL DEFAULT '{}'
     );
+
+    CREATE TABLE IF NOT EXISTS roles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      is_system INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+      permission TEXT NOT NULL,
+      UNIQUE(role_id, permission)
+    );
   `);
 
-  // Auto-seed if tables are empty
+  // ---- Ensure users table exists (legacy or fresh) ----
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT,
+      password_hash TEXT NOT NULL,
+      role_id INTEGER,
+      role TEXT NOT NULL DEFAULT 'admin',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ---- Migration: add email and role_id columns if missing ----
+  const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!cols.includes('email')) {
+    db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+  }
+  if (!cols.includes('role_id')) {
+    db.exec('ALTER TABLE users ADD COLUMN role_id INTEGER');
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL');
+
+  // ---- Seed default roles ----
+  const roleCount = db.prepare('SELECT COUNT(*) as count FROM roles').get();
+  if (roleCount.count === 0) {
+    seedRoles();
+    console.log('Seeded default roles (Super Admin, Admin, Editor)');
+  }
+
+  // ---- Backfill role_id from old role TEXT column ----
+  const needsBackfill = db.prepare('SELECT COUNT(*) as count FROM users WHERE role_id IS NULL').get();
+  if (needsBackfill.count > 0) {
+    backfillRoleIds();
+  }
+
+  // ---- Seed default admin user ----
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount.count === 0) {
+    const superAdminRole = db.prepare("SELECT id FROM roles WHERE slug = 'super_admin'").get();
     const hash = bcrypt.hashSync('admin123', 10);
-    db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)').run('admin', hash, 'super_admin');
+    db.prepare('INSERT INTO users (username, password_hash, role, role_id) VALUES (?, ?, ?, ?)').run('admin', hash, 'super_admin', superAdminRole.id);
     console.log('Default super admin user created (username: admin, password: admin123)');
   }
 
+  // ---- Seed products ----
   const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get();
   if (productCount.count === 0) {
     seedProducts();
     console.log('Seeded 20 products into database');
   }
 
+  // ---- Seed gift settings ----
   const settingsCount = db.prepare('SELECT COUNT(*) as count FROM gift_settings').get();
   if (settingsCount.count === 0) {
     seedGiftSettings();
     console.log('Seeded gift finder settings');
   }
+}
+
+function seedRoles() {
+  const insertRole = db.prepare('INSERT INTO roles (name, slug, is_system) VALUES (?, ?, ?)');
+  const insertPerm = db.prepare('INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)');
+
+  const seed = db.transaction(() => {
+    // Super Admin — is_system, all permissions implied in code (no rows needed)
+    insertRole.run('Super Admin', 'super_admin', 1);
+
+    // Admin — broad access
+    const adminResult = insertRole.run('Admin', 'admin', 0);
+    const adminPerms = [
+      'products.view', 'products.create', 'products.edit', 'products.delete',
+      'users.view',
+      'gift_settings.view', 'gift_settings.edit',
+    ];
+    for (const p of adminPerms) insertPerm.run(adminResult.lastInsertRowid, p);
+
+    // Editor — limited access
+    const editorResult = insertRole.run('Editor', 'editor', 0);
+    const editorPerms = ['products.view', 'products.edit', 'gift_settings.view'];
+    for (const p of editorPerms) insertPerm.run(editorResult.lastInsertRowid, p);
+  });
+  seed();
+}
+
+function backfillRoleIds() {
+  const roleMap = {};
+  const roles = db.prepare('SELECT id, slug FROM roles').all();
+  for (const r of roles) roleMap[r.slug] = r.id;
+
+  const users = db.prepare('SELECT id, role FROM users WHERE role_id IS NULL').all();
+  const update = db.prepare('UPDATE users SET role_id = ? WHERE id = ?');
+
+  const backfill = db.transaction(() => {
+    for (const u of users) {
+      const roleId = roleMap[u.role] || roleMap['editor'];
+      update.run(roleId, u.id);
+    }
+  });
+  backfill();
+  console.log(`Backfilled role_id for ${users.length} user(s)`);
 }
 
 function seedProducts() {

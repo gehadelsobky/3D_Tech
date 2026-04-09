@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.get('/', (_req, res) => {
 });
 
 // PUT /api/gift-settings — admin only
-router.put('/', authenticate, requireAdmin, (req, res) => {
+router.put('/', authenticate, requirePermission('gift_settings.edit'), (req, res) => {
   const settings = req.body;
   if (!settings || typeof settings !== 'object') {
     return res.status(400).json({ error: 'Invalid settings data' });
