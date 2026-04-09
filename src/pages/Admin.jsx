@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useAuth } from '../context/AuthContext';
 import { useGiftSettings } from '../context/GiftSettingsContext';
-import { apiGet, apiPost, apiPut, apiDelete } from '../lib/api';
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '../lib/api';
+import { usePageContent } from '../context/PageContentContext';
 import { categories } from '../data/products';
 
 const emptyProduct = {
@@ -175,6 +176,134 @@ export default function Admin() {
   const [accountError, setAccountError] = useState('');
   const [accountSuccess, setAccountSuccess] = useState('');
   const [accountSaving, setAccountSaving] = useState(false);
+
+  // Pages editor state
+  const { content: allPages, updatePage, refreshPages, pagesMeta } = usePageContent();
+  const [pagesList, setPagesList] = useState([]);
+  const [editingPage, setEditingPage] = useState(null); // slug
+  const [pageForm, setPageForm] = useState(null);
+  const [pageError, setPageError] = useState('');
+  const [pageSaving, setPageSaving] = useState(false);
+  const [showNewPageForm, setShowNewPageForm] = useState(false);
+  const [newPageTitle, setNewPageTitle] = useState('');
+  const [newPageSlug, setNewPageSlug] = useState('');
+  const [newPageCreating, setNewPageCreating] = useState(false);
+
+  const CORE_PAGES = ['global', 'home', 'about', 'contact', 'products'];
+
+  const PAGE_LABELS = {
+    global: 'Global Settings (Contact Info, Company)',
+    home: 'Home Page',
+    about: 'About Page',
+    contact: 'Contact Page',
+    products: 'Products Page',
+  };
+
+  useEffect(() => {
+    if (hasPermission('pages.edit')) {
+      apiGet('/pages').then(setPagesList).catch(() => {});
+    }
+  }, [hasPermission]);
+
+  const startEditPage = (slug) => {
+    setEditingPage(slug);
+    setPageForm(JSON.parse(JSON.stringify(allPages[slug] || {})));
+    setPageError('');
+  };
+
+  const cancelPage = () => {
+    setEditingPage(null);
+    setPageForm(null);
+    setPageError('');
+  };
+
+  const handlePageFieldChange = (key, value) => {
+    setPageForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handlePageArrayChange = (key, index, value) => {
+    setPageForm((prev) => {
+      const arr = [...(prev[key] || [])];
+      arr[index] = value;
+      return { ...prev, [key]: arr };
+    });
+  };
+
+  const handlePageArrayObjChange = (key, index, field, value) => {
+    setPageForm((prev) => {
+      const arr = [...(prev[key] || [])];
+      arr[index] = { ...arr[index], [field]: value };
+      return { ...prev, [key]: arr };
+    });
+  };
+
+  const addPageArrayItem = (key, defaultValue) => {
+    setPageForm((prev) => ({ ...prev, [key]: [...(prev[key] || []), defaultValue] }));
+  };
+
+  const removePageArrayItem = (key, index) => {
+    setPageForm((prev) => ({ ...prev, [key]: (prev[key] || []).filter((_, i) => i !== index) }));
+  };
+
+  const savePage = async () => {
+    setPageError('');
+    setPageSaving(true);
+    try {
+      await updatePage(editingPage, pageForm);
+      cancelPage();
+    } catch (err) {
+      setPageError(err.message || 'Failed to save page');
+    } finally {
+      setPageSaving(false);
+    }
+  };
+
+  const createNewPage = async () => {
+    if (!newPageTitle.trim() || !newPageSlug.trim()) {
+      setPageError('Title and slug are required');
+      return;
+    }
+    setPageError('');
+    setNewPageCreating(true);
+    try {
+      await apiPost('/pages', { title: newPageTitle.trim(), slug: newPageSlug.trim() });
+      setShowNewPageForm(false);
+      setNewPageTitle('');
+      setNewPageSlug('');
+      const updatedList = await apiGet('/pages');
+      setPagesList(updatedList);
+      await refreshPages();
+    } catch (err) {
+      setPageError(err.message || 'Failed to create page');
+    } finally {
+      setNewPageCreating(false);
+    }
+  };
+
+  const togglePageVisibility = async (slug, currentHidden) => {
+    setPageError('');
+    try {
+      await apiPatch(`/pages/${slug}/visibility`, { hidden: !currentHidden });
+      const updatedList = await apiGet('/pages');
+      setPagesList(updatedList);
+      await refreshPages();
+    } catch (err) {
+      setPageError(err.message || 'Failed to update visibility');
+    }
+  };
+
+  const deletePage = async (slug) => {
+    if (!confirm(`Are you sure you want to permanently delete the "${slug}" page?`)) return;
+    setPageError('');
+    try {
+      await apiDelete(`/pages/${slug}`);
+      const updatedList = await apiGet('/pages');
+      setPagesList(updatedList);
+      await refreshPages();
+    } catch (err) {
+      setPageError(err.message || 'Failed to delete page');
+    }
+  };
 
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -646,10 +775,11 @@ export default function Admin() {
             hasPermission('gift_settings.view') && { key: 'gift', label: 'Gift Settings' },
             hasPermission('users.view') && { key: 'users', label: 'Users' },
             hasPermission('roles.manage') && { key: 'roles', label: 'Roles' },
+            hasPermission('pages.edit') && { key: 'pages', label: 'Pages' },
           ].filter(Boolean).map((tab) => (
             <button
               key={tab.key}
-              onClick={() => { setActiveTab(tab.key); cancel(); cancelSettings(); cancelUser(); cancelRole(); }}
+              onClick={() => { setActiveTab(tab.key); cancel(); cancelSettings(); cancelUser(); cancelRole(); cancelPage(); }}
               className={`px-4 py-2 text-sm font-medium rounded-md cursor-pointer border-none transition-colors ${
                 activeTab === tab.key
                   ? 'bg-white text-text shadow-sm'
@@ -1229,6 +1359,180 @@ export default function Admin() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== PAGES TAB ==================== */}
+        {activeTab === 'pages' && hasPermission('pages.edit') && (
+          <>
+            {pageError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{pageError}</div>
+            )}
+
+            {editingPage && pageForm ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-text text-lg">{PAGE_LABELS[editingPage] || editingPage}</h3>
+                  <div className="flex gap-3">
+                    <button onClick={savePage} disabled={pageSaving} className={btnPrimary}>{pageSaving ? 'Saving...' : 'Save Changes'}</button>
+                    <button onClick={cancelPage} className={btnSecondary}>Cancel</button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  {Object.entries(pageForm).map(([key, value]) => {
+                    // String fields
+                    if (typeof value === 'string') {
+                      const isLong = value.length > 100;
+                      return (
+                        <div key={key}>
+                          <label className="block text-xs font-medium text-text-muted mb-1">{key}</label>
+                          {isLong ? (
+                            <textarea value={value} onChange={(e) => handlePageFieldChange(key, e.target.value)} rows={3} className={'w-full ' + inputClass + ' resize-none'} />
+                          ) : (
+                            <input type="text" value={value} onChange={(e) => handlePageFieldChange(key, e.target.value)} className={'w-full ' + inputClass} />
+                          )}
+                        </div>
+                      );
+                    }
+                    // Array of strings
+                    if (Array.isArray(value) && value.length >= 0 && (value.length === 0 || typeof value[0] === 'string')) {
+                      return (
+                        <div key={key}>
+                          <label className="block text-xs font-medium text-text-muted mb-2">{key}</label>
+                          {value.map((item, i) => (
+                            <div key={i} className="flex gap-2 mb-2">
+                              <input type="text" value={item} onChange={(e) => handlePageArrayChange(key, i, e.target.value)} className={'flex-1 ' + inputClass} />
+                              <button onClick={() => removePageArrayItem(key, i)} className={btnDanger}>&times;</button>
+                            </div>
+                          ))}
+                          <button onClick={() => addPageArrayItem(key, '')} className={addBtn}>+ Add item</button>
+                        </div>
+                      );
+                    }
+                    // Array of objects (stats, steps, etc.)
+                    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+                      const fields = Object.keys(value[0]);
+                      return (
+                        <div key={key}>
+                          <label className="block text-xs font-medium text-text-muted mb-2">{key}</label>
+                          {value.map((item, i) => (
+                            <div key={i} className="flex gap-2 mb-2 items-start p-3 bg-surface rounded-lg">
+                              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {fields.map((f) => (
+                                  <div key={f}>
+                                    <label className="block text-[10px] text-text-muted mb-0.5">{f}</label>
+                                    {(item[f] || '').length > 80 ? (
+                                      <textarea value={item[f] || ''} onChange={(e) => handlePageArrayObjChange(key, i, f, e.target.value)} rows={2} className={'w-full ' + inputClass + ' resize-none text-xs'} />
+                                    ) : (
+                                      <input type="text" value={item[f] || ''} onChange={(e) => handlePageArrayObjChange(key, i, f, e.target.value)} className={'w-full ' + inputClass + ' text-xs'} />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              <button onClick={() => removePageArrayItem(key, i)} className={btnDanger + ' mt-4'}>&times;</button>
+                            </div>
+                          ))}
+                          <button onClick={() => addPageArrayItem(key, Object.fromEntries(fields.map(f => [f, ''])))} className={addBtn}>+ Add item</button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Add New Page button */}
+                <div className="flex justify-end">
+                  <button onClick={() => { setShowNewPageForm(true); setPageError(''); }} className={btnPrimary}>+ New Page</button>
+                </div>
+
+                {/* New Page Form */}
+                {showNewPageForm && (
+                  <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+                    <h4 className="font-semibold text-text">Create New Page</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Page Title</label>
+                        <input
+                          type="text"
+                          value={newPageTitle}
+                          onChange={(e) => {
+                            setNewPageTitle(e.target.value);
+                            // Auto-generate slug from title
+                            setNewPageSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+                          }}
+                          placeholder="e.g. FAQ, Services, Partners"
+                          className={'w-full ' + inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">URL Slug</label>
+                        <input
+                          type="text"
+                          value={newPageSlug}
+                          onChange={(e) => setNewPageSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                          placeholder="e.g. faq, services, partners"
+                          className={'w-full ' + inputClass}
+                        />
+                        <p className="text-[10px] text-text-muted mt-1">URL: /page/{newPageSlug || 'slug'}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={createNewPage} disabled={newPageCreating} className={btnPrimary}>{newPageCreating ? 'Creating...' : 'Create Page'}</button>
+                      <button onClick={() => { setShowNewPageForm(false); setNewPageTitle(''); setNewPageSlug(''); setPageError(''); }} className={btnSecondary}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pages List */}
+                <div className="space-y-3">
+                  {pagesList.map((page) => (
+                    <div key={page.slug} className={`bg-white rounded-xl border p-5 flex items-center justify-between ${page.hidden ? 'border-orange-200 bg-orange-50/30' : 'border-gray-100'}`}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-text">{PAGE_LABELS[page.slug] || page.title || page.slug}</h4>
+                          {page.is_custom ? (
+                            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">Custom</span>
+                          ) : (
+                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">Core</span>
+                          )}
+                          {page.hidden ? (
+                            <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium">Hidden</span>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-text-muted mt-1">
+                          /{page.is_custom ? `page/${page.slug}` : (page.slug === 'global' ? '—' : page.slug)}
+                          {' · '}Last updated: {page.updated_at ? new Date(page.updated_at).toLocaleString() : 'Never'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => startEditPage(page.slug)} className="px-4 py-2 text-sm font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>
+                        {page.slug !== 'global' && (
+                          <button
+                            onClick={() => togglePageVisibility(page.slug, page.hidden)}
+                            className={`px-3 py-2 text-sm font-medium rounded-lg cursor-pointer border-none transition-colors ${page.hidden ? 'text-green-700 bg-green-50 hover:bg-green-100' : 'text-orange-700 bg-orange-50 hover:bg-orange-100'}`}
+                            title={page.hidden ? 'Show page' : 'Hide page'}
+                          >
+                            {page.hidden ? 'Show' : 'Hide'}
+                          </button>
+                        )}
+                        {page.is_custom ? (
+                          <button
+                            onClick={() => deletePage(page.slug)}
+                            className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors"
+                            title="Delete page permanently"
+                          >
+                            Delete
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>

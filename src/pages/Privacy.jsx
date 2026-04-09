@@ -1,4 +1,10 @@
+import { usePageContent } from '../context/PageContentContext';
+
 export default function Privacy() {
+  const { global: g } = usePageContent();
+  const email = g.email || 'info@3dtecheg.com';
+  const company = g.companyName || '3D Tech';
+
   return (
     <main className="bg-surface min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -40,16 +46,16 @@ export default function Privacy() {
 
           <section>
             <h2 className="text-lg font-semibold text-text mb-2">6. Your Rights</h2>
-            <p>You have the right to access, correct, or delete your personal information at any time. To exercise these rights, please contact us at info@3dtecheg.com.</p>
+            <p>You have the right to access, correct, or delete your personal information at any time. To exercise these rights, please contact us at {email}.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-text mb-2">7. Contact</h2>
             <p>If you have questions about this privacy policy, please contact us at:</p>
             <p className="mt-2 font-medium text-text">
-              3D Tech<br />
-              Email: info@3dtecheg.com<br />
-              Phone: +201018559479 / +201005449959
+              {company}<br />
+              Email: {email}<br />
+              Phone: {g.phone1 || '+201018559479'}{g.phone2 ? ` / ${g.phone2}` : ''}
             </p>
           </section>
         </div>

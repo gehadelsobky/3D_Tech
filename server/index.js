@@ -8,6 +8,7 @@ import productRoutes from './routes/products.js';
 import giftSettingsRoutes from './routes/gift-settings.js';
 import userRoutes from './routes/users.js';
 import roleRoutes from './routes/roles.js';
+import pageRoutes from './routes/pages.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -25,6 +26,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/gift-settings', giftSettingsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/pages', pageRoutes);
 
 // Serve frontend static files (production)
 app.use(express.static(path.join(__dirname, '..', 'dist')));

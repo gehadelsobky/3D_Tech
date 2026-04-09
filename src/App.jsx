@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProductProvider } from './context/ProductContext';
 import { GiftSettingsProvider } from './context/GiftSettingsContext';
+import { PageContentProvider, usePageContent } from './context/PageContentContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -13,6 +14,7 @@ import Contact from './pages/Contact';
 import Privacy from './pages/Privacy';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import CustomPage from './pages/CustomPage';
 import NotFound from './pages/NotFound';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -29,32 +31,49 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function PageRoute({ slug, children }) {
+  const { pagesMeta, loading } = usePageContent();
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-text-muted">Loading...</div>
+      </div>
+    );
+  }
+  const meta = pagesMeta.find((p) => p.slug === slug);
+  if (meta && meta.hidden) return <NotFound />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <ProductProvider>
         <GiftSettingsProvider>
+        <PageContentProvider>
         <BrowserRouter>
           <ScrollToTop />
           <div className="min-h-screen flex flex-col">
             <Header />
             <div className="flex-1">
               <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/products/:id" element={<ProductDetail />} />
+                <Route path="/" element={<PageRoute slug="home"><Home /></PageRoute>} />
+                <Route path="/products" element={<PageRoute slug="products"><Products /></PageRoute>} />
+                <Route path="/products/:id" element={<PageRoute slug="products"><ProductDetail /></PageRoute>} />
                 <Route path="/gift-finder" element={<GiftFinder />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
+                <Route path="/about" element={<PageRoute slug="about"><About /></PageRoute>} />
+                <Route path="/contact" element={<PageRoute slug="contact"><Contact /></PageRoute>} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                <Route path="/page/:slug" element={<CustomPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
             <Footer />
           </div>
         </BrowserRouter>
+        </PageContentProvider>
         </GiftSettingsProvider>
       </ProductProvider>
     </AuthProvider>

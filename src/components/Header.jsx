@@ -1,24 +1,35 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { usePageContent } from '../context/PageContentContext';
 
-const navLinks = [
-  { to: '/', label: 'Home' },
-  { to: '/products', label: 'Products' },
+const coreNavLinks = [
+  { to: '/', label: 'Home', slug: 'home' },
+  { to: '/products', label: 'Products', slug: 'products' },
   { to: '/gift-finder', label: 'Gift Finder' },
-  { to: '/about', label: 'About' },
-  { to: '/contact', label: 'Get a Quote' },
+  { to: '/about', label: 'About', slug: 'about' },
+  { to: '/contact', label: 'Get a Quote', slug: 'contact' },
 ];
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { global: g, pagesMeta } = usePageContent();
+
+  const hiddenSlugs = useMemo(() => new Set((pagesMeta || []).filter(p => p.hidden).map(p => p.slug)), [pagesMeta]);
+  const customPages = useMemo(() => (pagesMeta || []).filter(p => p.is_custom && !p.hidden), [pagesMeta]);
+
+  const navLinks = useMemo(() => {
+    const visible = coreNavLinks.filter(link => !link.slug || !hiddenSlugs.has(link.slug));
+    const custom = customPages.map(p => ({ to: `/page/${p.slug}`, label: p.title || p.slug }));
+    return [...visible, ...custom];
+  }, [hiddenSlugs, customPages]);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center no-underline">
-            <img src="/logo.jpeg" alt="3D Tech" style={{ width: 60, height: 60 }} />
+            <img src={g.logoUrl || '/logo.jpeg'} alt={g.companyName || '3D Tech'} style={{ width: 60, height: 60 }} />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">

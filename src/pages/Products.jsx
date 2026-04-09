@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { categories } from '../data/products';
 import { useProducts } from '../context/ProductContext';
+import { usePageContent } from '../context/PageContentContext';
 import ProductCard from '../components/ProductCard';
 
 function useDebounce(value, delay) {
@@ -15,6 +16,7 @@ function useDebounce(value, delay) {
 
 export default function Products() {
   const { products, loading } = useProducts();
+  const { content: c } = usePageContent('products');
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);
@@ -52,8 +54,8 @@ export default function Products() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-text mb-2">Product Catalog</h1>
-          <p className="text-text-muted">Browse our full range of customizable 3D-printed products</p>
+          <h1 className="text-3xl font-bold text-text mb-2">{c.title || 'Product Catalog'}</h1>
+          <p className="text-text-muted">{c.description || 'Browse our full range of customizable 3D-printed products'}</p>
         </div>
 
         {/* Search & Filters */}
@@ -74,7 +76,7 @@ export default function Products() {
             </svg>
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder={c.searchPlaceholder || 'Search products...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -119,8 +121,8 @@ export default function Products() {
         ) : (
           <div className="text-center py-20">
             <div className="text-4xl mb-3">🔍</div>
-            <h3 className="text-lg font-semibold text-text mb-1">No products found</h3>
-            <p className="text-text-muted text-sm">Try adjusting your search or filter criteria</p>
+            <h3 className="text-lg font-semibold text-text mb-1">{c.noResultsTitle || 'No products found'}</h3>
+            <p className="text-text-muted text-sm">{c.noResultsDescription || 'Try adjusting your search or filter criteria'}</p>
           </div>
         )}
 

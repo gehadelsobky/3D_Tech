@@ -52,6 +52,15 @@ export function initDb() {
       permission TEXT NOT NULL,
       UNIQUE(role_id, permission)
     );
+
+    CREATE TABLE IF NOT EXISTS page_content (
+      slug TEXT PRIMARY KEY,
+      title TEXT,
+      content TEXT NOT NULL DEFAULT '{}',
+      hidden INTEGER NOT NULL DEFAULT 0,
+      is_custom INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // ---- Ensure users table exists (legacy or fresh) ----
@@ -76,6 +85,18 @@ export function initDb() {
     db.exec('ALTER TABLE users ADD COLUMN role_id INTEGER');
   }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL');
+
+  // ---- Migration: add hidden, is_custom, title columns to page_content if missing ----
+  const pageCols = db.prepare("PRAGMA table_info(page_content)").all().map(c => c.name);
+  if (!pageCols.includes('hidden')) {
+    db.exec('ALTER TABLE page_content ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!pageCols.includes('is_custom')) {
+    db.exec('ALTER TABLE page_content ADD COLUMN is_custom INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!pageCols.includes('title')) {
+    db.exec('ALTER TABLE page_content ADD COLUMN title TEXT');
+  }
 
   // ---- Seed default roles ----
   const roleCount = db.prepare('SELECT COUNT(*) as count FROM roles').get();
@@ -111,6 +132,13 @@ export function initDb() {
   if (settingsCount.count === 0) {
     seedGiftSettings();
     console.log('Seeded gift finder settings');
+  }
+
+  // ---- Seed page content ----
+  const pageCount = db.prepare('SELECT COUNT(*) as count FROM page_content').get();
+  if (pageCount.count === 0) {
+    seedPageContent();
+    console.log('Seeded page content');
   }
 }
 
@@ -248,6 +276,99 @@ function seedGiftSettings() {
     },
   };
   db.prepare('INSERT INTO gift_settings (id, settings) VALUES (1, ?)').run(JSON.stringify(defaultSettings));
+}
+
+function seedPageContent() {
+  const insert = db.prepare('INSERT INTO page_content (slug, content) VALUES (?, ?)');
+
+  const pages = {
+    global: {
+      companyName: '3DTech',
+      tagline: 'Custom 3D printed promotional products and branded giveaways for every need.',
+      email: 'info@3dtecheg.com',
+      phone1: '+201018559479',
+      phone2: '+201005449959',
+      location: 'Cairo, Egypt',
+      logoUrl: '/logo.jpeg',
+      whyUs: [
+        'Free design mockup',
+        '24-hour quote turnaround',
+        'No hidden fees',
+        'Bulk order discounts',
+        'Quality guarantee',
+      ],
+    },
+    home: {
+      heroBadge: 'Custom 3D Printed Products',
+      heroTitle1: 'Branded Giveaways',
+      heroTitle2: 'Made Unique',
+      heroDescription: 'Stand out with custom 3D-printed promotional products. From USB drives to desk accessories, we bring your brand to life in three dimensions.',
+      heroCta1: 'Browse Products',
+      heroCta2: 'Find the Perfect Gift',
+      stats: [
+        { value: '500+', label: 'Projects Delivered' },
+        { value: '50+', label: 'Corporate Clients' },
+        { value: '24hr', label: 'Quote Turnaround' },
+        { value: '100%', label: 'Custom Designs' },
+      ],
+      categoriesTitle: 'Product Categories',
+      categoriesDescription: 'Explore our range of customizable 3D-printed promotional products.',
+      featuredTitle: 'Featured Products',
+      featuredDescription: 'Popular items from our catalog',
+      ctaTitle: 'Ready to Make Your Brand Stand Out?',
+      ctaDescription: 'Get a free quote for custom 3D-printed promotional products tailored to your brand.',
+      ctaButton: 'Request a Free Quote',
+    },
+    about: {
+      heroTitle1: 'We Bring Brands to Life in',
+      heroTitle2: 'Three Dimensions',
+      heroDescription: '3DTech combines cutting-edge 3D printing technology with creative design to produce unique, custom promotional products that leave a lasting impression.',
+      storyTitle: 'Our Story',
+      storyParagraphs: [
+        'Founded with a passion for innovation and branding, 3DTech started as a small workshop with a single 3D printer and a big vision: to transform how companies think about promotional products.',
+        'Today, we operate a full production facility equipped with industrial-grade FDM and SLA printers, serving clients from startups to Fortune 500 companies. Every product we create is custom-designed to reflect your brand\'s unique identity.',
+        'What sets us apart is our end-to-end approach. From initial design consultation to final delivery, we handle every step with precision and care.',
+      ],
+      storyStats: [
+        { value: '2019', label: 'Founded' },
+        { value: '500+', label: 'Projects Completed' },
+        { value: '50+', label: 'Active Clients' },
+        { value: '10+', label: '3D Printers' },
+      ],
+      processTitle: 'How It Works',
+      processSteps: [
+        { number: '01', title: 'Tell Us Your Needs', description: 'Submit a quote request with your project details, audience, and timeline.' },
+        { number: '02', title: 'Design & Mockup', description: 'Our team creates a custom 3D design mockup for your approval.' },
+        { number: '03', title: 'Production', description: 'Once approved, we begin printing using industrial-grade materials.' },
+        { number: '04', title: 'Delivery', description: 'Quality-checked products are packaged and shipped to your door.' },
+      ],
+      ctaTitle: "Let's Create Something Amazing",
+      ctaDescription: 'Ready to elevate your brand with custom 3D-printed products? Get started with a free quote.',
+      ctaButton: 'Get a Free Quote',
+    },
+    contact: {
+      title: 'Request a Quote',
+      description: "Tell us about your project and we'll prepare a custom quote for you.",
+      successTitle: 'Quote Request Sent!',
+      successMessage: "Thank you, {name}. We've received your request and will get back to you within 24 hours.",
+      successButton: 'Submit Another Request',
+      submitButton: 'Submit Quote Request',
+    },
+    products: {
+      title: 'Product Catalog',
+      description: 'Browse our full range of customizable 3D-printed products',
+      searchPlaceholder: 'Search products...',
+      noResultsTitle: 'No products found',
+      noResultsDescription: 'Try adjusting your search or filter criteria',
+    },
+  };
+
+  const seed = db.transaction(() => {
+    for (const [slug, content] of Object.entries(pages)) {
+      insert.run(slug, JSON.stringify(content));
+    }
+  });
+  seed();
 }
 
 export default db;
