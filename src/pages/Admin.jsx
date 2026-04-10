@@ -144,6 +144,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardStats, setDashboardStats] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [newSubmissionCount, setNewSubmissionCount] = useState(0);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -357,6 +358,20 @@ export default function Admin() {
     if (activeTab === 'dashboard') fetchDashboard();
   }, [activeTab, fetchDashboard]);
 
+  // Fetch new submission count on mount (for badge)
+  useEffect(() => {
+    if (hasPermission('forms.view')) {
+      apiGet('/dashboard/stats').then(data => {
+        setNewSubmissionCount(data.newSubmissions || 0);
+      }).catch(() => {});
+    }
+  }, [hasPermission]);
+
+  // Sync badge when dashboard data refreshes
+  useEffect(() => {
+    if (dashboardStats) setNewSubmissionCount(dashboardStats.newSubmissions || 0);
+  }, [dashboardStats]);
+
   const startNewForm = () => {
     setEditingForm('new');
     setFormDef({ name: '', slug: '', description: '', fields: [], settings: { submitButton: 'Submit', successTitle: 'Thank You!', successMessage: 'Your submission has been received.' } });
@@ -457,6 +472,8 @@ export default function Admin() {
     try {
       await apiPatch(`/forms/submissions/${subId}`, { status });
       loadSubmissions(viewingSubmissions, submissionsPage);
+      // Refresh badge count
+      apiGet('/dashboard/stats').then(data => setNewSubmissionCount(data.newSubmissions || 0)).catch(() => {});
     } catch (err) {
       setFormsError(err.message);
     }
@@ -1149,20 +1166,25 @@ export default function Admin() {
             hasPermission('roles.manage') && { key: 'roles', label: 'Roles' },
             hasPermission('pages.edit') && { key: 'pages', label: 'Pages' },
             hasPermission('products.view') && { key: 'categories', label: 'Categories' },
-            hasPermission('forms.view') && { key: 'forms', label: 'Forms' },
+            hasPermission('forms.view') && { key: 'forms', label: 'Forms', badge: newSubmissionCount },
             hasPermission('pages.edit') && { key: 'layout', label: 'Header & Footer' },
             hasPermission('settings.smtp') && { key: 'settings', label: 'Settings' },
           ].filter(Boolean).map((tab) => (
             <button
               key={tab.key}
               onClick={() => { setActiveTab(tab.key); cancel(); cancelSettings(); cancelUser(); cancelRole(); cancelPage(); }}
-              className={`px-4 py-2 text-sm font-medium rounded-md cursor-pointer border-none transition-colors ${
+              className={`relative px-4 py-2 text-sm font-medium rounded-md cursor-pointer border-none transition-colors ${
                 activeTab === tab.key
                   ? 'bg-white text-text shadow-sm'
                   : 'bg-transparent text-text-muted hover:text-text'
               }`}
             >
               {tab.label}
+              {tab.badge > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full leading-none">
+                  {tab.badge > 99 ? '99+' : tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
