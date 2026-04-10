@@ -36,6 +36,7 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold text-sm mb-3">Company</h4>
             <ul className="space-y-2 list-none p-0 m-0">
+              {!hiddenSlugs.has('services') && <li><Link to="/services" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Services</Link></li>}
               {!hiddenSlugs.has('about') && <li><Link to="/about" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">About Us</Link></li>}
               <li><Link to="/gift-finder" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Gift Finder</Link></li>
               {!hiddenSlugs.has('contact') && <li><Link to="/contact" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Contact</Link></li>}

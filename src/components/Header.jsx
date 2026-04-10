@@ -4,6 +4,7 @@ import { usePageContent } from '../context/PageContentContext';
 
 const coreNavLinks = [
   { to: '/', label: 'Home', slug: 'home' },
+  { to: '/services', label: 'Services', slug: 'services' },
   { to: '/products', label: 'Products', slug: 'products' },
   { to: '/gift-finder', label: 'Gift Finder' },
   { to: '/about', label: 'About', slug: 'about' },

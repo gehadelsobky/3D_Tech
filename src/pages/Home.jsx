@@ -21,15 +21,15 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="max-w-2xl">
             <span className="inline-block px-3 py-1 bg-white/10 text-accent text-sm font-medium rounded-full mb-6 border border-white/10">
-              {c.heroBadge || 'Custom 3D Printed Products'}
+              {c.heroBadge || '3D Printing & Corporate Gifts in Egypt'}
             </span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-              {c.heroTitle1 || 'Branded Giveaways'}
+              {c.heroTitle1 || '3D Printing & Premium'}
               <br />
-              <span className="text-accent">{c.heroTitle2 || 'Made Unique'}</span>
+              <span className="text-accent">{c.heroTitle2 || 'Corporate Gifts'}</span>
             </h1>
             <p className="text-lg text-gray-300 mb-8 leading-relaxed max-w-lg">
-              {c.heroDescription || 'Stand out with custom 3D-printed promotional products. From USB drives to desk accessories, we bring your brand to life in three dimensions.'}
+              {c.heroDescription || 'At 3DTECH, we turn ideas into real products and help companies deliver customized corporate gifts that clearly and professionally represent their brand.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
@@ -129,6 +129,54 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Why 3DTECH */}
+      <section className="bg-surface">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-text mb-3">{c.whyTitle || 'Why 3DTECH?'}</h2>
+            <p className="text-text-muted max-w-md mx-auto">
+              {c.whyDescription || 'What sets us apart in the Egyptian market'}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {(c.whyReasons || [
+              { icon: '🇪🇬', text: 'Practical experience in the Egyptian market' },
+              { icon: '💡', text: 'From idea to execution' },
+              { icon: '⏰', text: 'Clear commitment to deadlines' },
+              { icon: '📦', text: 'Flexible production quantities' },
+              { icon: '🤝', text: 'Direct communication and technical support' },
+            ]).map((item, i) => (
+              <div key={i} className="bg-white rounded-xl p-5 text-center border border-gray-100">
+                <div className="text-2xl mb-2">{item.icon}</div>
+                <p className="text-sm font-medium text-text">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How We Work */}
+      <section className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <h2 className="text-2xl font-bold text-text mb-10 text-center">{c.processTitle || 'How We Work'}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {(c.processSteps || [
+              { number: '01', title: 'Receive Your Idea', description: 'We receive your idea or request' },
+              { number: '02', title: 'Technical Review', description: 'Specification definition & feasibility' },
+              { number: '03', title: '3D Design', description: 'Custom 3D design if required' },
+              { number: '04', title: 'Production', description: 'Printing with industrial-grade printers' },
+              { number: '05', title: 'Delivery', description: 'Testing, packaging & delivery' },
+            ]).map((step) => (
+              <div key={step.number} className="relative bg-surface rounded-xl p-5 border border-gray-100 text-center">
+                <div className="text-2xl font-bold text-primary/20 mb-2">{step.number}</div>
+                <h3 className="font-semibold text-text text-sm mb-1">{step.title}</h3>
+                <p className="text-xs text-text-muted">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="bg-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
@@ -136,12 +184,20 @@ export default function Home() {
           <p className="text-red-100 mb-8 max-w-lg mx-auto">
             {c.ctaDescription || 'Get a free quote for custom 3D-printed promotional products tailored to your brand.'}
           </p>
-          <Link
-            to="/contact"
-            className="inline-flex items-center px-8 py-3 bg-white text-primary font-semibold rounded-lg hover:bg-gray-50 transition-colors no-underline"
-          >
-            {c.ctaButton || 'Request a Free Quote'}
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center px-8 py-3 bg-white text-primary font-semibold rounded-lg hover:bg-gray-50 transition-colors no-underline"
+            >
+              {c.ctaButton || 'Request a Free Quote'}
+            </Link>
+            <Link
+              to="/services"
+              className="inline-flex items-center justify-center px-8 py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors no-underline border border-white/20"
+            >
+              {c.ctaButton2 || 'Explore Our Services'}
+            </Link>
+          </div>
         </div>
       </section>
     </main>

@@ -17,6 +17,7 @@ import Admin from './pages/Admin';
 import Login from './pages/Login';
 import CustomPage from './pages/CustomPage';
 import FormPage from './pages/FormPage';
+import Services from './pages/Services';
 import NotFound from './pages/NotFound';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -64,6 +65,7 @@ export default function App() {
                 <Route path="/products" element={<PageRoute slug="products"><Products /></PageRoute>} />
                 <Route path="/products/:id" element={<PageRoute slug="products"><ProductDetail /></PageRoute>} />
                 <Route path="/gift-finder" element={<GiftFinder />} />
+                <Route path="/services" element={<PageRoute slug="services"><Services /></PageRoute>} />
                 <Route path="/about" element={<PageRoute slug="about"><About /></PageRoute>} />
                 <Route path="/contact" element={<PageRoute slug="contact"><Contact /></PageRoute>} />
                 <Route path="/privacy" element={<Privacy />} />
