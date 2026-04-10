@@ -145,6 +145,7 @@ export default function Admin() {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [newSubmissionCount, setNewSubmissionCount] = useState(0);
+  const [adminProductSearch, setAdminProductSearch] = useState('');
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -1407,11 +1408,22 @@ export default function Admin() {
             )}
 
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="font-semibold text-text">{products.length} Products</h3>
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
+                <h3 className="font-semibold text-text shrink-0">{products.length} Products</h3>
+                <input
+                  type="text"
+                  value={adminProductSearch}
+                  onChange={(e) => setAdminProductSearch(e.target.value)}
+                  placeholder="Search products..."
+                  className={inputClass + ' max-w-xs'}
+                />
               </div>
               <div className="divide-y divide-gray-100">
-                {products.map((product) => (
+                {products.filter(p => {
+                  if (!adminProductSearch.trim()) return true;
+                  const q = adminProductSearch.toLowerCase();
+                  return p.name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
+                }).map((product) => (
                   <div key={product.id} className="flex items-center gap-4 px-6 py-4">
                     <img src={product.images?.[0] || 'https://images.unsplash.com/photo-1586953208270-767889fa9b0e?w=600&h=400&fit=crop'} alt={product.name} className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
                     <div className="flex-1 min-w-0">

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
+import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
 export default function ProductDetail() {
@@ -18,6 +19,12 @@ export default function ProductDetail() {
   }
 
   if (!product) return <Navigate to="/products" />;
+
+  const relatedProducts = useMemo(() => {
+    return products
+      .filter(p => p.id !== product.id && p.category_id === product.category_id)
+      .slice(0, 4);
+  }, [products, product]);
 
   const images = product.images ? JSON.parse(product.images) : (product.image ? [product.image] : []);
   const productStructuredData = useMemo(() => ({
@@ -144,6 +151,18 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Related Products */}
+      {relatedProducts.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-t border-gray-100">
+          <h2 className="text-2xl font-bold text-text mb-6">Related Products</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedProducts.map(p => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
