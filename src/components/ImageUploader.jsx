@@ -13,24 +13,29 @@ export default function ImageUploader({ value, onChange, className = '' }) {
       setError('File too large. Maximum 5MB.');
       return;
     }
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are allowed.');
+      return;
+    }
     setError('');
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append('image', file);
       const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('Not authenticated. Please log in again.');
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Upload failed' }));
-        throw new Error(err.error);
-      }
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error('Server returned an invalid response. Make sure the backend is running.'); }
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
       onChange(data.url);
     } catch (err) {
+      console.error('Image upload error:', err);
       setError(err.message || 'Upload failed');
     } finally {
       setUploading(false);
