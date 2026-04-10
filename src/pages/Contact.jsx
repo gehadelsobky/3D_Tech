@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGiftSettings } from '../context/GiftSettingsContext';
 import { usePageContent } from '../context/PageContentContext';
+import { apiPost } from '../lib/api';
 
 const initialForm = {
   name: '',
@@ -25,6 +26,8 @@ export default function Contact() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     const product = searchParams.get('product');
@@ -48,7 +51,7 @@ export default function Contact() {
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (errs === null) return;
@@ -57,8 +60,17 @@ export default function Contact() {
       return;
     }
     setErrors({});
-    console.log('Form submitted:', form);
-    setSubmitted(true);
+    setSubmitError('');
+    setSubmitting(true);
+    try {
+      const { honeypot, ...data } = form;
+      await apiPost('/forms/quote-request/submit', { ...data, _hp: honeypot });
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err.message || 'Failed to submit. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -167,8 +179,12 @@ export default function Contact() {
                 <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder="Tell us about your project, branding needs, or any specific requirements..." />
               </div>
 
-              <button type="submit" className="w-full sm:w-auto px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors cursor-pointer border-none">
-                {c.submitButton || 'Submit Quote Request'}
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{submitError}</div>
+              )}
+
+              <button type="submit" disabled={submitting} className="w-full sm:w-auto px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors cursor-pointer border-none disabled:opacity-50">
+                {submitting ? 'Submitting...' : (c.submitButton || 'Submit Quote Request')}
               </button>
             </form>
           </div>

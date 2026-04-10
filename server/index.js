@@ -9,6 +9,7 @@ import giftSettingsRoutes from './routes/gift-settings.js';
 import userRoutes from './routes/users.js';
 import roleRoutes from './routes/roles.js';
 import pageRoutes from './routes/pages.js';
+import formRoutes from './routes/forms.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/gift-settings', giftSettingsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/pages', pageRoutes);
+app.use('/api/forms', formRoutes);
 
 // Serve frontend static files (production)
 app.use(express.static(path.join(__dirname, '..', 'dist')));

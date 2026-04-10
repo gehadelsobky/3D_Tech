@@ -10,7 +10,6 @@ export const ALL_PERMISSIONS = [
   'gift_settings.view',
   'gift_settings.edit',
   'roles.manage',
-  // Future (Step 2-4):
   'pages.view',
   'pages.edit',
   'forms.view',
@@ -55,7 +54,6 @@ export const PERMISSION_GROUPS = [
   },
   {
     label: 'Pages',
-    soon: true,
     permissions: [
       { key: 'pages.view', label: 'View' },
       { key: 'pages.edit', label: 'Edit' },
@@ -63,7 +61,6 @@ export const PERMISSION_GROUPS = [
   },
   {
     label: 'Forms',
-    soon: true,
     permissions: [
       { key: 'forms.view', label: 'View' },
       { key: 'forms.create', label: 'Create' },

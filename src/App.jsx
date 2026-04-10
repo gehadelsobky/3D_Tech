@@ -15,6 +15,7 @@ import Privacy from './pages/Privacy';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import CustomPage from './pages/CustomPage';
+import FormPage from './pages/FormPage';
 import NotFound from './pages/NotFound';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -67,6 +68,7 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                 <Route path="/page/:slug" element={<CustomPage />} />
+                <Route path="/form/:slug" element={<FormPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>

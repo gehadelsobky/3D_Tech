@@ -305,6 +305,161 @@ export default function Admin() {
     }
   };
 
+  // ==================== FORMS STATE ====================
+  const [formsList, setFormsList] = useState([]);
+  const [formsLoading, setFormsLoading] = useState(false);
+  const [formsError, setFormsError] = useState('');
+  const [editingForm, setEditingForm] = useState(null); // form object or 'new'
+  const [formDef, setFormDef] = useState(null);
+  const [formSaving, setFormSaving] = useState(false);
+  const [viewingSubmissions, setViewingSubmissions] = useState(null); // form id
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionsTotal, setSubmissionsTotal] = useState(0);
+  const [submissionsPage, setSubmissionsPage] = useState(1);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [viewingSubmission, setViewingSubmission] = useState(null); // single submission
+
+  const FIELD_TYPES = ['text', 'email', 'tel', 'number', 'date', 'select', 'textarea', 'checkbox'];
+
+  const fetchForms = useCallback(async () => {
+    setFormsLoading(true);
+    try {
+      const data = await apiGet('/forms');
+      setFormsList(data);
+    } catch (err) {
+      setFormsError(err.message);
+    } finally {
+      setFormsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasPermission('forms.view') && activeTab === 'forms') {
+      fetchForms();
+    }
+  }, [activeTab, hasPermission, fetchForms]);
+
+  const startNewForm = () => {
+    setEditingForm('new');
+    setFormDef({ name: '', slug: '', description: '', fields: [], settings: { submitButton: 'Submit', successTitle: 'Thank You!', successMessage: 'Your submission has been received.' } });
+    setFormsError('');
+  };
+
+  const startEditForm = (f) => {
+    setEditingForm(f);
+    setFormDef({ name: f.name, slug: f.slug, description: f.description, fields: [...f.fields], settings: { ...f.settings }, is_active: f.is_active });
+    setFormsError('');
+  };
+
+  const cancelForm = () => {
+    setEditingForm(null);
+    setFormDef(null);
+    setFormsError('');
+  };
+
+  const saveForm = async () => {
+    if (!formDef.name.trim()) { setFormsError('Form name is required'); return; }
+    if (!formDef.slug.trim() && editingForm === 'new') { setFormsError('Slug is required'); return; }
+    setFormsError('');
+    setFormSaving(true);
+    try {
+      if (editingForm === 'new') {
+        await apiPost('/forms', formDef);
+      } else {
+        await apiPut(`/forms/${editingForm.id}`, formDef);
+      }
+      cancelForm();
+      fetchForms();
+    } catch (err) {
+      setFormsError(err.message || 'Failed to save form');
+    } finally {
+      setFormSaving(false);
+    }
+  };
+
+  const deleteForm = async (id) => {
+    if (!confirm('Delete this form and all its submissions?')) return;
+    try {
+      await apiDelete(`/forms/${id}`);
+      fetchForms();
+    } catch (err) {
+      setFormsError(err.message);
+    }
+  };
+
+  const addField = () => {
+    setFormDef(prev => ({
+      ...prev,
+      fields: [...prev.fields, { name: '', label: '', type: 'text', required: false, placeholder: '', options: [] }]
+    }));
+  };
+
+  const updateField = (index, key, value) => {
+    setFormDef(prev => {
+      const fields = [...prev.fields];
+      fields[index] = { ...fields[index], [key]: value };
+      // Auto-generate name from label
+      if (key === 'label' && !fields[index]._nameEdited) {
+        fields[index].name = value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      }
+      return { ...prev, fields };
+    });
+  };
+
+  const removeField = (index) => {
+    setFormDef(prev => ({ ...prev, fields: prev.fields.filter((_, i) => i !== index) }));
+  };
+
+  const moveField = (index, direction) => {
+    setFormDef(prev => {
+      const fields = [...prev.fields];
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= fields.length) return prev;
+      [fields[index], fields[newIndex]] = [fields[newIndex], fields[index]];
+      return { ...prev, fields };
+    });
+  };
+
+  const loadSubmissions = async (formId, page = 1) => {
+    setViewingSubmissions(formId);
+    setSubmissionsPage(page);
+    setSubmissionsLoading(true);
+    try {
+      const data = await apiGet(`/forms/${formId}/submissions?page=${page}&limit=15`);
+      setSubmissions(data.submissions);
+      setSubmissionsTotal(data.total);
+    } catch (err) {
+      setFormsError(err.message);
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  };
+
+  const updateSubmissionStatus = async (subId, status) => {
+    try {
+      await apiPatch(`/forms/submissions/${subId}`, { status });
+      loadSubmissions(viewingSubmissions, submissionsPage);
+    } catch (err) {
+      setFormsError(err.message);
+    }
+  };
+
+  const deleteSubmission = async (subId) => {
+    if (!confirm('Delete this submission?')) return;
+    try {
+      await apiDelete(`/forms/submissions/${subId}`);
+      loadSubmissions(viewingSubmissions, submissionsPage);
+    } catch (err) {
+      setFormsError(err.message);
+    }
+  };
+
+  const closeSubmissions = () => {
+    setViewingSubmissions(null);
+    setSubmissions([]);
+    setViewingSubmission(null);
+  };
+
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
@@ -776,6 +931,7 @@ export default function Admin() {
             hasPermission('users.view') && { key: 'users', label: 'Users' },
             hasPermission('roles.manage') && { key: 'roles', label: 'Roles' },
             hasPermission('pages.edit') && { key: 'pages', label: 'Pages' },
+            hasPermission('forms.view') && { key: 'forms', label: 'Forms' },
           ].filter(Boolean).map((tab) => (
             <button
               key={tab.key}
@@ -1533,6 +1689,260 @@ export default function Admin() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== FORMS TAB ==================== */}
+        {activeTab === 'forms' && hasPermission('forms.view') && (
+          <>
+            {formsError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{formsError}</div>
+            )}
+
+            {/* Viewing submissions for a form */}
+            {viewingSubmissions ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-text text-lg">
+                    Submissions — {formsList.find(f => f.id === viewingSubmissions)?.name}
+                    <span className="ml-2 text-sm font-normal text-text-muted">({submissionsTotal} total)</span>
+                  </h3>
+                  <button onClick={closeSubmissions} className={btnSecondary}>Back to Forms</button>
+                </div>
+
+                {/* Viewing single submission detail */}
+                {viewingSubmission ? (
+                  <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-text">Submission #{viewingSubmission.id}</h4>
+                      <button onClick={() => setViewingSubmission(null)} className={btnSecondary}>Back to List</button>
+                    </div>
+                    <div className="text-xs text-text-muted">Submitted: {new Date(viewingSubmission.created_at).toLocaleString()}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {Object.entries(viewingSubmission.data).filter(([k]) => k !== '_hp').map(([key, value]) => (
+                        <div key={key} className="bg-surface rounded-lg p-3">
+                          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide mb-1">{key}</div>
+                          <div className="text-sm text-text">{value || '—'}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                      <label className="text-xs font-medium text-text-muted">Status:</label>
+                      <select
+                        value={viewingSubmission.status}
+                        onChange={(e) => updateSubmissionStatus(viewingSubmission.id, e.target.value)}
+                        className={inputClass + ' text-xs'}
+                      >
+                        <option value="new">New</option>
+                        <option value="read">Read</option>
+                        <option value="replied">Replied</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                      <button onClick={() => { deleteSubmission(viewingSubmission.id); setViewingSubmission(null); }} className="text-xs text-red-500 hover:text-red-700 bg-transparent border-none cursor-pointer">Delete</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {submissionsLoading ? (
+                      <div className="text-center py-10 text-text-muted">Loading submissions...</div>
+                    ) : submissions.length === 0 ? (
+                      <div className="text-center py-10 text-text-muted">No submissions yet.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {submissions.map((sub) => (
+                          <div key={sub.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm text-text truncate">{sub.data.name || sub.data.email || `#${sub.id}`}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                  sub.status === 'new' ? 'bg-blue-100 text-blue-700' :
+                                  sub.status === 'read' ? 'bg-gray-100 text-gray-600' :
+                                  sub.status === 'replied' ? 'bg-green-100 text-green-700' :
+                                  'bg-gray-100 text-gray-500'
+                                }`}>{sub.status}</span>
+                              </div>
+                              <p className="text-xs text-text-muted mt-0.5 truncate">
+                                {sub.data.email && `${sub.data.email} · `}{new Date(sub.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 ml-3">
+                              <button onClick={() => setViewingSubmission(sub)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none">View</button>
+                              <button onClick={() => deleteSubmission(sub.id)} className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none">Delete</button>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Pagination */}
+                        {submissionsTotal > 15 && (
+                          <div className="flex justify-center gap-2 pt-3">
+                            {Array.from({ length: Math.ceil(submissionsTotal / 15) }, (_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => loadSubmissions(viewingSubmissions, i + 1)}
+                                className={`px-3 py-1 text-xs rounded-lg border-none cursor-pointer ${submissionsPage === i + 1 ? 'bg-primary text-white' : 'bg-gray-100 text-text-muted hover:bg-gray-200'}`}
+                              >{i + 1}</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : editingForm && formDef ? (
+              /* Form builder */
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-text text-lg">{editingForm === 'new' ? 'Create New Form' : `Edit: ${editingForm.name}`}</h3>
+                  <div className="flex gap-3">
+                    <button onClick={saveForm} disabled={formSaving} className={btnPrimary}>{formSaving ? 'Saving...' : 'Save Form'}</button>
+                    <button onClick={cancelForm} className={btnSecondary}>Cancel</button>
+                  </div>
+                </div>
+
+                {/* Form Details */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Form Name *</label>
+                      <input type="text" value={formDef.name} onChange={(e) => {
+                        setFormDef(prev => ({
+                          ...prev,
+                          name: e.target.value,
+                          ...(editingForm === 'new' ? { slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') } : {})
+                        }));
+                      }} className={'w-full ' + inputClass} placeholder="e.g. Quote Request, Contact Form" />
+                    </div>
+                    {editingForm === 'new' && (
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Slug *</label>
+                        <input type="text" value={formDef.slug} onChange={(e) => setFormDef(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} className={'w-full ' + inputClass} placeholder="e.g. quote-request" />
+                      </div>
+                    )}
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-text-muted mb-1">Description</label>
+                      <input type="text" value={formDef.description} onChange={(e) => setFormDef(prev => ({ ...prev, description: e.target.value }))} className={'w-full ' + inputClass} placeholder="Brief description of this form" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Fields Builder */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-text">Fields ({formDef.fields.length})</h4>
+                    <button onClick={addField} className={btnPrimary}>+ Add Field</button>
+                  </div>
+
+                  {formDef.fields.length === 0 && (
+                    <p className="text-center text-text-muted text-sm py-4">No fields yet. Click "+ Add Field" to start building your form.</p>
+                  )}
+
+                  {formDef.fields.map((field, i) => (
+                    <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-surface">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-text-muted">Field {i + 1}</span>
+                        <div className="flex gap-1">
+                          <button onClick={() => moveField(i, -1)} disabled={i === 0} className="text-xs px-1.5 py-0.5 bg-gray-200 rounded cursor-pointer border-none disabled:opacity-30">↑</button>
+                          <button onClick={() => moveField(i, 1)} disabled={i === formDef.fields.length - 1} className="text-xs px-1.5 py-0.5 bg-gray-200 rounded cursor-pointer border-none disabled:opacity-30">↓</button>
+                          <button onClick={() => removeField(i)} className="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded cursor-pointer border-none">Remove</button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[10px] text-text-muted mb-0.5">Label *</label>
+                          <input type="text" value={field.label} onChange={(e) => updateField(i, 'label', e.target.value)} className={'w-full ' + inputClass + ' text-xs'} placeholder="e.g. Full Name" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-text-muted mb-0.5">Field Name</label>
+                          <input type="text" value={field.name} onChange={(e) => { updateField(i, 'name', e.target.value); updateField(i, '_nameEdited', true); }} className={'w-full ' + inputClass + ' text-xs'} placeholder="e.g. full_name" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-text-muted mb-0.5">Type</label>
+                          <select value={field.type} onChange={(e) => updateField(i, 'type', e.target.value)} className={'w-full ' + inputClass + ' text-xs bg-white'}>
+                            {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] text-text-muted mb-0.5">Placeholder</label>
+                          <input type="text" value={field.placeholder || ''} onChange={(e) => updateField(i, 'placeholder', e.target.value)} className={'w-full ' + inputClass + ' text-xs'} />
+                        </div>
+                        <div className="flex items-center gap-3 pt-4">
+                          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
+                            <input type="checkbox" checked={field.required || false} onChange={(e) => updateField(i, 'required', e.target.checked)} />
+                            Required
+                          </label>
+                        </div>
+                      </div>
+                      {field.type === 'select' && (
+                        <div>
+                          <label className="block text-[10px] text-text-muted mb-0.5">Options (one per line)</label>
+                          <textarea
+                            value={(field.options || []).join('\n')}
+                            onChange={(e) => updateField(i, 'options', e.target.value.split('\n'))}
+                            rows={3}
+                            className={'w-full ' + inputClass + ' text-xs resize-none'}
+                            placeholder="Option 1&#10;Option 2&#10;Option 3"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Form Settings */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  <h4 className="font-semibold text-text">Success Settings</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Submit Button Text</label>
+                      <input type="text" value={formDef.settings.submitButton || ''} onChange={(e) => setFormDef(prev => ({ ...prev, settings: { ...prev.settings, submitButton: e.target.value } }))} className={'w-full ' + inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Success Title</label>
+                      <input type="text" value={formDef.settings.successTitle || ''} onChange={(e) => setFormDef(prev => ({ ...prev, settings: { ...prev.settings, successTitle: e.target.value } }))} className={'w-full ' + inputClass} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-text-muted mb-1">Success Message</label>
+                      <textarea value={formDef.settings.successMessage || ''} onChange={(e) => setFormDef(prev => ({ ...prev, settings: { ...prev.settings, successMessage: e.target.value } }))} rows={2} className={'w-full ' + inputClass + ' resize-none'} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Forms list */
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  {hasPermission('forms.create') && <button onClick={startNewForm} className={btnPrimary}>+ New Form</button>}
+                </div>
+
+                {formsLoading ? (
+                  <div className="text-center py-10 text-text-muted">Loading forms...</div>
+                ) : formsList.length === 0 ? (
+                  <div className="text-center py-10 text-text-muted">No forms yet. Create your first form!</div>
+                ) : (
+                  <div className="space-y-3">
+                    {formsList.map((f) => (
+                      <div key={f.id} className={`bg-white rounded-xl border p-5 flex items-center justify-between ${f.is_active ? 'border-gray-100' : 'border-orange-200 bg-orange-50/30'}`}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-text">{f.name}</h4>
+                            {!f.is_active && <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium">Inactive</span>}
+                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">{f.submission_count || 0} submissions</span>
+                          </div>
+                          <p className="text-xs text-text-muted mt-1">{f.description || 'No description'} · slug: {f.slug}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => loadSubmissions(f.id)} className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 cursor-pointer border-none transition-colors">Submissions</button>
+                          {hasPermission('forms.edit') && <button onClick={() => startEditForm(f)} className="px-3 py-2 text-sm font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>}
+                          {hasPermission('forms.delete') && <button onClick={() => deleteForm(f.id)} className="px-3 py-2 text-sm font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Delete</button>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </>

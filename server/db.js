@@ -53,6 +53,27 @@ export function initDb() {
       UNIQUE(role_id, permission)
     );
 
+    CREATE TABLE IF NOT EXISTS form_definitions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      fields TEXT NOT NULL DEFAULT '[]',
+      settings TEXT NOT NULL DEFAULT '{}',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS form_submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      form_id INTEGER NOT NULL REFERENCES form_definitions(id) ON DELETE CASCADE,
+      data TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'new',
+      notes TEXT NOT NULL DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS page_content (
       slug TEXT PRIMARY KEY,
       title TEXT,
@@ -139,6 +160,13 @@ export function initDb() {
   if (pageCount.count === 0) {
     seedPageContent();
     console.log('Seeded page content');
+  }
+
+  // ---- Seed default forms ----
+  const formCount = db.prepare('SELECT COUNT(*) as count FROM form_definitions').get();
+  if (formCount.count === 0) {
+    seedForms();
+    console.log('Seeded default forms');
   }
 }
 
@@ -369,6 +397,31 @@ function seedPageContent() {
     }
   });
   seed();
+}
+
+function seedForms() {
+  const quoteFields = [
+    { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Your full name' },
+    { name: 'company', label: 'Company', type: 'text', required: false, placeholder: 'Company name (optional)' },
+    { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'you@company.com' },
+    { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: '+20 xxx xxx xxxx' },
+    { name: 'giftType', label: 'Gift Type', type: 'select', required: false, options: ['Corporate Event', 'Trade Show / Expo', 'Employee Appreciation', 'Client Gift', 'Product Launch', 'Holiday / Seasonal', 'Wedding / Party Favor', 'Other'] },
+    { name: 'product', label: 'Product Interest', type: 'text', required: false, placeholder: 'Specific product (if any)' },
+    { name: 'quantity', label: 'Estimated Quantity', type: 'text', required: false, placeholder: 'e.g. 100-500 units' },
+    { name: 'budget', label: 'Budget Range', type: 'text', required: false, placeholder: 'e.g. EGP 50-100 per unit' },
+    { name: 'deliveryDate', label: 'Desired Delivery Date', type: 'date', required: false },
+    { name: 'notes', label: 'Additional Notes', type: 'textarea', required: false, placeholder: 'Tell us about your project...' },
+  ];
+
+  const settings = { successTitle: 'Quote Request Sent!', successMessage: "Thank you! We've received your request and will get back to you within 24 hours.", submitButton: 'Submit Quote Request' };
+
+  db.prepare("INSERT INTO form_definitions (name, slug, description, fields, settings) VALUES (?, ?, ?, ?, ?)").run(
+    'Quote Request',
+    'quote-request',
+    'Request a custom quote for promotional products',
+    JSON.stringify(quoteFields),
+    JSON.stringify(settings)
+  );
 }
 
 export default db;
