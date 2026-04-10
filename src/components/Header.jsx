@@ -1,29 +1,33 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { usePageContent } from '../context/PageContentContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const coreNavLinks = [
-  { to: '/', label: 'Home', slug: 'home' },
-  { to: '/services', label: 'Services', slug: 'services' },
-  { to: '/products', label: 'Products', slug: 'products' },
-  { to: '/gift-finder', label: 'Gift Finder' },
-  { to: '/about', label: 'About', slug: 'about' },
-  { to: '/contact', label: 'Get a Quote', slug: 'contact' },
+  { to: '/', labelKey: 'nav.home', slug: 'home' },
+  { to: '/services', labelKey: 'nav.services', slug: 'services' },
+  { to: '/products', labelKey: 'nav.products', slug: 'products' },
+  { to: '/gift-finder', labelKey: 'nav.giftFinder' },
+  { to: '/about', labelKey: 'nav.about', slug: 'about' },
+  { to: '/contact', labelKey: 'nav.contact', slug: 'contact' },
 ];
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { global: g, pagesMeta } = usePageContent();
+  const { t, lang, toggleLang } = useLanguage();
 
   const hiddenSlugs = useMemo(() => new Set((pagesMeta || []).filter(p => p.hidden).map(p => p.slug)), [pagesMeta]);
   const customPages = useMemo(() => (pagesMeta || []).filter(p => p.is_custom && !p.hidden), [pagesMeta]);
 
   const navLinks = useMemo(() => {
-    const visible = coreNavLinks.filter(link => !link.slug || !hiddenSlugs.has(link.slug));
+    const visible = coreNavLinks
+      .filter(link => !link.slug || !hiddenSlugs.has(link.slug))
+      .map(link => ({ ...link, label: t(link.labelKey) }));
     const custom = customPages.map(p => ({ to: `/page/${p.slug}`, label: p.title || p.slug }));
     return [...visible, ...custom];
-  }, [hiddenSlugs, customPages]);
+  }, [hiddenSlugs, customPages, t]);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
@@ -49,12 +53,21 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-2">
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLang}
+              className="px-3 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+              aria-label="Toggle language"
+            >
+              {lang === 'en' ? 'العربية' : 'English'}
+            </button>
+
             <Link
               to="/contact"
               className="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors no-underline"
             >
-              {g.headerCta || 'Request Quote'}
+              {g.headerCta || t('nav.requestQuote')}
             </Link>
           </div>
 
@@ -91,12 +104,18 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+            <button
+              onClick={() => { toggleLang(); setMobileOpen(false); }}
+              className="block w-full text-start px-3 py-2 rounded-lg text-sm font-medium text-text-muted hover:text-text hover:bg-gray-50 cursor-pointer border-none bg-transparent"
+            >
+              {lang === 'en' ? 'العربية' : 'English'}
+            </button>
             <Link
               to="/contact"
               onClick={() => setMobileOpen(false)}
               className="block mt-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg text-center no-underline"
             >
-              {g.headerCta || 'Request Quote'}
+              {g.headerCta || t('nav.requestQuote')}
             </Link>
           </div>
         </div>

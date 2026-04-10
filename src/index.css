@@ -21,3 +21,16 @@ body {
   color: var(--color-text);
   background: #ffffff;
 }
+
+/* RTL Support */
+[dir="rtl"] body {
+  font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
+}
+
+[dir="rtl"] .text-start {
+  text-align: right;
+}
+
+[dir="rtl"] .text-end {
+  text-align: left;
+}

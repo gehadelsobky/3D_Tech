@@ -2,10 +2,12 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Footer() {
   const { global: g, pagesMeta } = usePageContent();
   const { categories } = useCategories();
+  const { t } = useLanguage();
   const hiddenSlugs = useMemo(() => new Set((pagesMeta || []).filter(p => p.hidden).map(p => p.slug)), [pagesMeta]);
   const customPages = (pagesMeta || []).filter((p) => p.is_custom && !p.hidden);
 
@@ -18,13 +20,13 @@ export default function Footer() {
               <img src={g.logoUrl || '/logo.jpeg'} alt={g.companyName || '3D Tech'} className="h-10 w-auto" />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
-              {g.tagline || 'Custom 3D printed promotional products and branded giveaways for every need.'}
+              {g.tagline || t('home.heroSubtitle')}
             </p>
           </div>
 
           {!hiddenSlugs.has('products') && categories.length > 0 && (
           <div>
-            <h4 className="text-white font-semibold text-sm mb-3">Products</h4>
+            <h4 className="text-white font-semibold text-sm mb-3">{t('footer.productsTitle')}</h4>
             <ul className="space-y-2 list-none p-0 m-0">
               {categories.slice(0, 6).map((cat) => (
                 <li key={cat.id}><Link to={`/products?cat=${cat.id}`} className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{cat.name}</Link></li>
@@ -34,13 +36,13 @@ export default function Footer() {
           )}
 
           <div>
-            <h4 className="text-white font-semibold text-sm mb-3">Company</h4>
+            <h4 className="text-white font-semibold text-sm mb-3">{t('footer.companyTitle')}</h4>
             <ul className="space-y-2 list-none p-0 m-0">
-              {!hiddenSlugs.has('services') && <li><Link to="/services" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Services</Link></li>}
-              {!hiddenSlugs.has('about') && <li><Link to="/about" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">About Us</Link></li>}
-              <li><Link to="/gift-finder" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Gift Finder</Link></li>
-              {!hiddenSlugs.has('contact') && <li><Link to="/contact" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Contact</Link></li>}
-              <li><Link to="/privacy" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Privacy Policy</Link></li>
+              {!hiddenSlugs.has('services') && <li><Link to="/services" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{t('nav.services')}</Link></li>}
+              {!hiddenSlugs.has('about') && <li><Link to="/about" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{t('nav.about')}</Link></li>}
+              <li><Link to="/gift-finder" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{t('nav.giftFinder')}</Link></li>
+              {!hiddenSlugs.has('contact') && <li><Link to="/contact" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{t('nav.contact')}</Link></li>}
+              <li><Link to="/privacy" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{t('nav.privacy')}</Link></li>
               {customPages.map((p) => (
                 <li key={p.slug}><Link to={`/page/${p.slug}`} className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{p.title || p.slug}</Link></li>
               ))}
@@ -48,7 +50,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-semibold text-sm mb-3">Get In Touch</h4>
+            <h4 className="text-white font-semibold text-sm mb-3">{t('footer.getInTouch')}</h4>
             <ul className="space-y-2 list-none p-0 m-0 text-sm text-gray-400">
               <li>{g.email || 'info@3dtecheg.com'}</li>
               <li>{g.phone1 || '+201018559479'}</li>
@@ -67,11 +69,11 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500">&copy; {new Date().getFullYear()} {g.companyName || '3DTech'}. All rights reserved.</p>
+          <p className="text-xs text-gray-500">&copy; {new Date().getFullYear()} {g.companyName || '3DTech'}. {t('footer.rights')}</p>
           <div className="flex gap-4">
-            <Link to="/privacy" className="text-xs text-gray-500 hover:text-gray-300 no-underline transition-colors">Privacy</Link>
+            <Link to="/privacy" className="text-xs text-gray-500 hover:text-gray-300 no-underline transition-colors">{t('footer.privacy')}</Link>
             <span className="text-gray-700">|</span>
-            <Link to="/contact" className="text-xs text-gray-500 hover:text-gray-300 no-underline transition-colors">Contact</Link>
+            <Link to="/contact" className="text-xs text-gray-500 hover:text-gray-300 no-underline transition-colors">{t('footer.contact')}</Link>
           </div>
         </div>
       </div>

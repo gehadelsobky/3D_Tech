@@ -5,6 +5,7 @@ import { ProductProvider } from './context/ProductContext';
 import { GiftSettingsProvider } from './context/GiftSettingsContext';
 import { PageContentProvider, usePageContent } from './context/PageContentContext';
 import { CategoryProvider } from './context/CategoryContext';
+import { LanguageProvider } from './context/LanguageContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -50,6 +51,7 @@ function PageRoute({ slug, children }) {
 
 export default function App() {
   return (
+    <LanguageProvider>
     <AuthProvider>
       <CategoryProvider>
       <ProductProvider>
@@ -88,5 +90,6 @@ export default function App() {
       </ProductProvider>
       </CategoryProvider>
     </AuthProvider>
+    </LanguageProvider>
   );
 }
