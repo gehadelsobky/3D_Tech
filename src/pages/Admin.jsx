@@ -533,6 +533,73 @@ export default function Admin() {
     }
   };
 
+  // ==================== LAYOUT (HEADER & FOOTER) STATE ====================
+  const [layoutEditing, setLayoutEditing] = useState(false);
+  const [layoutForm, setLayoutForm] = useState(null);
+  const [layoutSaving, setLayoutSaving] = useState(false);
+  const [layoutError, setLayoutError] = useState('');
+  const [layoutSuccess, setLayoutSuccess] = useState('');
+
+  const { global: globalContent } = usePageContent();
+
+  const startEditLayout = () => {
+    setLayoutForm({
+      companyName: globalContent.companyName || '3DTech',
+      tagline: globalContent.tagline || '',
+      logoUrl: globalContent.logoUrl || '/logo.jpeg',
+      email: globalContent.email || '',
+      phone1: globalContent.phone1 || '',
+      phone2: globalContent.phone2 || '',
+      location: globalContent.location || 'Cairo, Egypt',
+      whyUs: globalContent.whyUs || ['Free design mockup', '24-hour quote turnaround', 'No hidden fees', 'Bulk order discounts', 'Quality guarantee'],
+      footerTagline: globalContent.footerTagline || globalContent.tagline || '',
+      socialFacebook: globalContent.socialFacebook || '',
+      socialInstagram: globalContent.socialInstagram || '',
+      socialLinkedin: globalContent.socialLinkedin || '',
+      socialTwitter: globalContent.socialTwitter || '',
+      headerCta: globalContent.headerCta || 'Request Quote',
+    });
+    setLayoutEditing(true);
+    setLayoutError('');
+    setLayoutSuccess('');
+  };
+
+  const cancelLayout = () => {
+    setLayoutEditing(false);
+    setLayoutForm(null);
+    setLayoutError('');
+  };
+
+  const saveLayout = async () => {
+    setLayoutSaving(true);
+    setLayoutError('');
+    setLayoutSuccess('');
+    try {
+      const merged = { ...globalContent, ...layoutForm };
+      await updatePage('global', merged);
+      await refreshPages();
+      setLayoutEditing(false);
+      setLayoutSuccess('Header & Footer settings saved successfully');
+    } catch (err) {
+      setLayoutError(err.message || 'Failed to save');
+    } finally {
+      setLayoutSaving(false);
+    }
+  };
+
+  const updateLayoutField = (key, value) => setLayoutForm(prev => ({ ...prev, [key]: value }));
+  const updateLayoutListItem = (key, i, value) => setLayoutForm(prev => {
+    const list = [...(prev[key] || [])];
+    list[i] = value;
+    return { ...prev, [key]: list };
+  });
+  const addLayoutListItem = (key) => setLayoutForm(prev => ({ ...prev, [key]: [...(prev[key] || []), ''] }));
+  const removeLayoutListItem = (key, i) => setLayoutForm(prev => {
+    const list = [...(prev[key] || [])];
+    list.splice(i, 1);
+    return { ...prev, [key]: list };
+  });
+
   // ==================== CATEGORIES STATE ====================
   const [editingCat, setEditingCat] = useState(null); // category object or 'new'
   const [catForm, setCatForm] = useState(null);
@@ -1066,6 +1133,7 @@ export default function Admin() {
             hasPermission('pages.edit') && { key: 'pages', label: 'Pages' },
             hasPermission('products.view') && { key: 'categories', label: 'Categories' },
             hasPermission('forms.view') && { key: 'forms', label: 'Forms' },
+            hasPermission('pages.edit') && { key: 'layout', label: 'Header & Footer' },
             hasPermission('settings.smtp') && { key: 'settings', label: 'Settings' },
           ].filter(Boolean).map((tab) => (
             <button
@@ -2183,6 +2251,212 @@ export default function Admin() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== LAYOUT (HEADER & FOOTER) TAB ==================== */}
+        {activeTab === 'layout' && hasPermission('pages.edit') && (
+          <>
+            {layoutError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{layoutError}</div>}
+            {layoutSuccess && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{layoutSuccess}</div>}
+
+            {!layoutEditing ? (
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-bold text-text">Header & Footer Settings</h2>
+                  <button onClick={startEditLayout} className={btnPrimary}>Edit</button>
+                </div>
+
+                {/* Preview - Header */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Header</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">Company Name</div>
+                      <div className="font-medium text-text">{globalContent.companyName || '3DTech'}</div>
+                    </div>
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">CTA Button Text</div>
+                      <div className="font-medium text-text">{globalContent.headerCta || 'Request Quote'}</div>
+                    </div>
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">Logo</div>
+                      <div className="flex items-center gap-3">
+                        <img src={globalContent.logoUrl || '/logo.jpeg'} alt="Logo" className="h-10 w-10 object-contain rounded" />
+                        <span className="text-sm text-text-muted">{globalContent.logoUrl || '/logo.jpeg'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview - Footer */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Footer</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">Tagline</div>
+                      <div className="text-sm text-text">{globalContent.tagline || '—'}</div>
+                    </div>
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">Location</div>
+                      <div className="text-sm text-text">{globalContent.location || 'Cairo, Egypt'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview - Contact Info */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">Email</div>
+                      <div className="text-sm text-text">{globalContent.email || '—'}</div>
+                    </div>
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">Phone 1</div>
+                      <div className="text-sm text-text">{globalContent.phone1 || '—'}</div>
+                    </div>
+                    <div className="bg-surface rounded-lg p-4">
+                      <div className="text-xs text-text-muted mb-1">Phone 2</div>
+                      <div className="text-sm text-text">{globalContent.phone2 || '—'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview - Social Links */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Social Media Links</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { label: 'Facebook', key: 'socialFacebook' },
+                      { label: 'Instagram', key: 'socialInstagram' },
+                      { label: 'LinkedIn', key: 'socialLinkedin' },
+                      { label: 'Twitter / X', key: 'socialTwitter' },
+                    ].map((s) => (
+                      <div key={s.key} className="bg-surface rounded-lg p-4">
+                        <div className="text-xs text-text-muted mb-1">{s.label}</div>
+                        <div className="text-sm text-text">{globalContent[s.key] || <span className="text-text-muted italic">Not set</span>}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preview - Why Us */}
+                <div>
+                  <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Why Us (Contact Sidebar)</h3>
+                  <div className="bg-surface rounded-lg p-4">
+                    <ul className="space-y-1">
+                      {(globalContent.whyUs || []).map((item, i) => (
+                        <li key={i} className="text-sm text-text flex items-center gap-2">
+                          <svg className="w-4 h-4 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-text mb-6">Edit Header & Footer</h2>
+
+                {/* Header Section */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Header</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Company Name</label>
+                      <input value={layoutForm.companyName} onChange={(e) => updateLayoutField('companyName', e.target.value)} className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Header CTA Button Text</label>
+                      <input value={layoutForm.headerCta} onChange={(e) => updateLayoutField('headerCta', e.target.value)} className={inputClass} placeholder="Request Quote" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Logo</label>
+                    <ImageUploader value={layoutForm.logoUrl} onChange={(v) => updateLayoutField('logoUrl', v)} />
+                  </div>
+                </div>
+
+                {/* Footer Section */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Footer</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Tagline</label>
+                      <textarea value={layoutForm.tagline} onChange={(e) => updateLayoutField('tagline', e.target.value)} rows={2} className={inputClass} placeholder="Company tagline shown in footer" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Location</label>
+                      <input value={layoutForm.location} onChange={(e) => updateLayoutField('location', e.target.value)} className={inputClass} placeholder="Cairo, Egypt" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Info */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Email</label>
+                      <input type="email" value={layoutForm.email} onChange={(e) => updateLayoutField('email', e.target.value)} className={inputClass} placeholder="info@3dtecheg.com" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Phone 1</label>
+                      <input value={layoutForm.phone1} onChange={(e) => updateLayoutField('phone1', e.target.value)} className={inputClass} placeholder="+201018559479" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Phone 2</label>
+                      <input value={layoutForm.phone2} onChange={(e) => updateLayoutField('phone2', e.target.value)} className={inputClass} placeholder="+201005449959" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Links */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Social Media Links</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Facebook URL</label>
+                      <input value={layoutForm.socialFacebook} onChange={(e) => updateLayoutField('socialFacebook', e.target.value)} className={inputClass} placeholder="https://facebook.com/3dtech" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Instagram URL</label>
+                      <input value={layoutForm.socialInstagram} onChange={(e) => updateLayoutField('socialInstagram', e.target.value)} className={inputClass} placeholder="https://instagram.com/3dtech" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">LinkedIn URL</label>
+                      <input value={layoutForm.socialLinkedin} onChange={(e) => updateLayoutField('socialLinkedin', e.target.value)} className={inputClass} placeholder="https://linkedin.com/company/3dtech" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Twitter / X URL</label>
+                      <input value={layoutForm.socialTwitter} onChange={(e) => updateLayoutField('socialTwitter', e.target.value)} className={inputClass} placeholder="https://x.com/3dtech" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Why Us List */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Why Us (Contact Sidebar)</h3>
+                  {layoutForm.whyUs.map((item, i) => (
+                    <div key={i} className="flex gap-2 mb-2">
+                      <input value={item} onChange={(e) => updateLayoutListItem('whyUs', i, e.target.value)} className={inputClass + ' flex-1'} placeholder="Selling point..." />
+                      {layoutForm.whyUs.length > 1 && <button onClick={() => removeLayoutListItem('whyUs', i)} className={btnDanger}>&times;</button>}
+                    </div>
+                  ))}
+                  <button onClick={() => addLayoutListItem('whyUs')} className={addBtn}>+ Add Item</button>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-4 border-t border-gray-100">
+                  <button onClick={saveLayout} disabled={layoutSaving} className={btnPrimary}>
+                    {layoutSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button onClick={cancelLayout} className={btnSecondary}>Cancel</button>
+                </div>
               </div>
             )}
           </>
