@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -27,6 +28,9 @@ app.use(helmet({
   contentSecurityPolicy: false,       // disable CSP so inline styles/scripts from React work
   crossOriginEmbedderPolicy: false,   // allow loading external images
 }));
+
+// Gzip/Brotli compression for all responses
+app.use(compression());
 
 // CORS — restrict origins in production
 const allowedOrigins = process.env.CORS_ORIGINS
@@ -180,11 +184,23 @@ ${customPageUrls}
   res.send(xml);
 });
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded files (cache 1 day)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1d',
+  etag: true,
+}));
 
-// Serve frontend static files (production)
-app.use(express.static(path.join(__dirname, '..', 'dist')));
+// Serve frontend static files (production) — Vite hashed assets get long cache
+app.use(express.static(path.join(__dirname, '..', 'dist'), {
+  maxAge: '7d',
+  etag: true,
+  setHeaders(res, filePath) {
+    // Vite hashed files (e.g., index-3ABFpbuO.css) can be cached forever
+    if (filePath.includes('/assets/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+}));
 
 // SPA fallback — all non-API routes serve index.html (Express 5 syntax)
 app.get('/{*splat}', (_req, res) => {
