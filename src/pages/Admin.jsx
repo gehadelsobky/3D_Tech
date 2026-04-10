@@ -141,7 +141,9 @@ export default function Admin() {
   const { settings, updateSettings } = useGiftSettings();
   const { categories, refreshCategories } = useCategories();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('products');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -340,6 +342,20 @@ export default function Admin() {
       fetchForms();
     }
   }, [activeTab, hasPermission, fetchForms]);
+
+  // Dashboard stats
+  const fetchDashboard = useCallback(async () => {
+    setDashboardLoading(true);
+    try {
+      const data = await apiGet('/dashboard/stats');
+      setDashboardStats(data);
+    } catch { /* ignore */ }
+    finally { setDashboardLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'dashboard') fetchDashboard();
+  }, [activeTab, fetchDashboard]);
 
   const startNewForm = () => {
     setEditingForm('new');
@@ -1126,6 +1142,7 @@ export default function Admin() {
         {/* Tabs */}
         <div className="flex flex-wrap gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
           {[
+            { key: 'dashboard', label: 'Dashboard' },
             hasPermission('products.view') && { key: 'products', label: 'Products' },
             hasPermission('gift_settings.view') && { key: 'gift', label: 'Gift Settings' },
             hasPermission('users.view') && { key: 'users', label: 'Users' },
@@ -1149,6 +1166,115 @@ export default function Admin() {
             </button>
           ))}
         </div>
+
+        {/* ==================== DASHBOARD TAB ==================== */}
+        {activeTab === 'dashboard' && (
+          <div>
+            {dashboardLoading && !dashboardStats ? (
+              <div className="text-center py-12 text-text-muted">Loading dashboard...</div>
+            ) : dashboardStats ? (
+              <>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                  {[
+                    { label: 'Products', value: dashboardStats.totalProducts, color: 'bg-blue-50 text-blue-700', icon: '📦' },
+                    { label: 'Categories', value: dashboardStats.totalCategories, color: 'bg-purple-50 text-purple-700', icon: '📂' },
+                    { label: 'Users', value: dashboardStats.totalUsers, color: 'bg-green-50 text-green-700', icon: '👥' },
+                    { label: 'Forms', value: dashboardStats.totalForms, color: 'bg-yellow-50 text-yellow-700', icon: '📝' },
+                    { label: 'Submissions', value: dashboardStats.totalSubmissions, color: 'bg-indigo-50 text-indigo-700', icon: '📩' },
+                    { label: 'New', value: dashboardStats.newSubmissions, color: 'bg-red-50 text-red-700', icon: '🔔' },
+                  ].map((stat) => (
+                    <div key={stat.label} className={`rounded-xl p-4 ${stat.color}`}>
+                      <div className="text-2xl mb-1">{stat.icon}</div>
+                      <div className="text-2xl font-bold">{stat.value}</div>
+                      <div className="text-xs font-medium opacity-80">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Recent Submissions */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-text">Recent Submissions</h3>
+                      {hasPermission('forms.view') && (
+                        <button onClick={() => setActiveTab('forms')} className="text-xs text-primary hover:underline cursor-pointer bg-transparent border-none">View All</button>
+                      )}
+                    </div>
+                    {dashboardStats.recentSubmissions.length === 0 ? (
+                      <p className="text-sm text-text-muted">No submissions yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {dashboardStats.recentSubmissions.map((sub) => (
+                          <div key={sub.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                            <div>
+                              <div className="text-sm font-medium text-text">{sub.form_name}</div>
+                              <div className="text-xs text-text-muted">
+                                {sub.data.name || sub.data.email || Object.values(sub.data).find(v => typeof v === 'string' && v.length > 0) || '—'}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                sub.status === 'new' ? 'bg-blue-100 text-blue-700' :
+                                sub.status === 'reviewed' ? 'bg-yellow-100 text-yellow-700' :
+                                sub.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>{sub.status}</span>
+                              <span className="text-xs text-text-muted">{new Date(sub.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent Products */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-text">Recent Products</h3>
+                      {hasPermission('products.view') && (
+                        <button onClick={() => setActiveTab('products')} className="text-xs text-primary hover:underline cursor-pointer bg-transparent border-none">View All</button>
+                      )}
+                    </div>
+                    {dashboardStats.recentProducts.length === 0 ? (
+                      <p className="text-sm text-text-muted">No products yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {dashboardStats.recentProducts.map((p) => (
+                          <div key={p.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                            <div className="text-sm font-medium text-text">{p.name}</div>
+                            <span className="text-xs text-text-muted">{new Date(p.created_at).toLocaleDateString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="mt-6 bg-white rounded-xl border border-gray-100 p-5">
+                  <h3 className="font-semibold text-text mb-4">Quick Actions</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {hasPermission('products.create') && (
+                      <button onClick={() => { setActiveTab('products'); setTimeout(() => { const btn = document.querySelector('[data-action="add-product"]'); if(btn) btn.click(); }, 100); }} className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark cursor-pointer border-none transition-colors">+ Add Product</button>
+                    )}
+                    {hasPermission('forms.view') && (
+                      <button onClick={() => setActiveTab('forms')} className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer border-none transition-colors">View Submissions</button>
+                    )}
+                    {hasPermission('pages.edit') && (
+                      <button onClick={() => setActiveTab('pages')} className="px-4 py-2 text-sm font-medium bg-gray-700 text-white rounded-lg hover:bg-gray-800 cursor-pointer border-none transition-colors">Edit Pages</button>
+                    )}
+                    {hasPermission('pages.edit') && (
+                      <button onClick={() => setActiveTab('layout')} className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer border-none transition-colors">Edit Layout</button>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 text-text-muted">Failed to load dashboard.</div>
+            )}
+          </div>
+        )}
 
         {/* ==================== PRODUCTS TAB ==================== */}
         {activeTab === 'products' && (

@@ -94,6 +94,46 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// Dashboard stats endpoint (admin)
+import { authenticate } from './middleware/auth.js';
+
+app.get('/api/dashboard/stats', authenticate, (req, res) => {
+  try {
+    const totalProducts = db.prepare('SELECT COUNT(*) as count FROM products').get().count;
+    const totalCategories = db.prepare('SELECT COUNT(*) as count FROM categories').get().count;
+    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+    const totalForms = db.prepare('SELECT COUNT(*) as count FROM form_definitions').get().count;
+
+    // Form submissions stats
+    const totalSubmissions = db.prepare('SELECT COUNT(*) as count FROM form_submissions').get().count;
+    const newSubmissions = db.prepare("SELECT COUNT(*) as count FROM form_submissions WHERE status = 'new'").get().count;
+
+    // Recent submissions (last 5)
+    const recentSubmissions = db.prepare(`
+      SELECT fs.id, fs.data, fs.status, fs.created_at, fd.name as form_name
+      FROM form_submissions fs
+      JOIN form_definitions fd ON fs.form_id = fd.id
+      ORDER BY fs.created_at DESC LIMIT 5
+    `).all().map(r => ({ ...r, data: JSON.parse(r.data) }));
+
+    // Recent products (last 5)
+    const recentProducts = db.prepare('SELECT id, name, created_at FROM products ORDER BY created_at DESC LIMIT 5').all();
+
+    res.json({
+      totalProducts,
+      totalCategories,
+      totalUsers,
+      totalForms,
+      totalSubmissions,
+      newSubmissions,
+      recentSubmissions,
+      recentProducts,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load dashboard stats' });
+  }
+});
+
 // Sitemap.xml — dynamic generation
 app.get('/sitemap.xml', (req, res) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`;
