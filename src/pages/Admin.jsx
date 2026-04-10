@@ -6,6 +6,7 @@ import { useGiftSettings } from '../context/GiftSettingsContext';
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '../lib/api';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
+import ImageUploader from '../components/ImageUploader';
 
 const emptyProduct = {
   name: '',
@@ -1146,8 +1147,23 @@ export default function Admin() {
                     <label className="block text-xs font-medium text-text-muted mb-1">Notes</label>
                     <input type="text" value={form.notes} onChange={(e) => handleChange('notes', e.target.value)} className={'w-full ' + inputClass} />
                   </div>
+                  {/* Product Images with Upload */}
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Images</label>
+                    {form.images.map((val, i) => (
+                      <div key={i} className="mb-3 p-3 bg-surface rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1">
+                            <ImageUploader value={val} onChange={(v) => handleArrayChange('images', i, v)} />
+                          </div>
+                          {form.images.length > 1 && <button onClick={() => removeArrayItem('images', i)} className={btnDanger + ' mt-1'}>&times;</button>}
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => addArrayItem('images')} className={addBtn}>+ Add Image</button>
+                  </div>
+                  {/* Features & Branding Options */}
                   {[
-                    { field: 'images', label: 'Image URLs' },
                     { field: 'features', label: 'Features' },
                     { field: 'brandingOptions', label: 'Branding Options' },
                   ].map(({ field, label }) => (

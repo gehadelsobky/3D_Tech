@@ -12,6 +12,7 @@ import pageRoutes from './routes/pages.js';
 import formRoutes from './routes/forms.js';
 import settingsRoutes from './routes/settings.js';
 import categoryRoutes from './routes/categories.js';
+import uploadRoutes from './routes/upload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -33,6 +34,10 @@ app.use('/api/pages', pageRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve frontend static files (production)
 app.use(express.static(path.join(__dirname, '..', 'dist')));
