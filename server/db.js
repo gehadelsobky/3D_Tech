@@ -33,6 +33,16 @@ export function initDb() {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS gift_settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       settings TEXT NOT NULL DEFAULT '{}'
@@ -146,6 +156,13 @@ export function initDb() {
     console.log('Default super admin user created (username: admin, password: admin123)');
   }
 
+  // ---- Seed categories ----
+  const catCount = db.prepare('SELECT COUNT(*) as count FROM categories').get();
+  if (catCount.count === 0) {
+    seedCategories();
+    console.log('Seeded product categories');
+  }
+
   // ---- Seed products ----
   const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get();
   if (productCount.count === 0) {
@@ -173,6 +190,25 @@ export function initDb() {
     seedForms();
     console.log('Seeded default forms');
   }
+}
+
+function seedCategories() {
+  const insert = db.prepare('INSERT INTO categories (id, name, icon, description, sort_order) VALUES (?, ?, ?, ?, ?)');
+  const cats = [
+    ['3d-printing', '3D Printing', '🖨️', 'Custom 3D printed items shaped as your logo or product', 0],
+    ['usb', 'USB & Flash Drives', '💾', 'Custom branded USB flash drives & dual drives', 1],
+    ['chargers', 'Chargers & Power Banks', '🔋', 'Wireless chargers, power banks & charging cables', 2],
+    ['gift-sets', 'Gift Sets', '🎁', 'Curated corporate gift sets in premium packaging', 3],
+    ['notebooks', 'Notebooks & Organizers', '📓', 'Branded notebooks, smart organizers & pen sets', 4],
+    ['desk', 'Desk Accessories', '🖊️', 'Desk sets, LED lamps & office accessories', 5],
+    ['drinkware', 'Drinkware', '☕', 'Mugs, thermal cups, water bottles & tumblers', 6],
+    ['eco', 'Eco-Friendly', '🌿', 'Wheat straw, bamboo & cork sustainable products', 7],
+    ['keychains', 'Keychains & Coasters', '🔑', 'Custom rubber keychains & coasters', 8],
+    ['awards', 'Awards & Trophies', '🏆', 'Crystal awards & recognition trophies', 9],
+    ['bags', 'Bags', '🎒', 'Custom tote bags with branding', 10],
+  ];
+  const seed = db.transaction(() => { for (const c of cats) insert.run(...c); });
+  seed();
 }
 
 function seedRoles() {

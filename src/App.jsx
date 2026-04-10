@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProductProvider } from './context/ProductContext';
 import { GiftSettingsProvider } from './context/GiftSettingsContext';
 import { PageContentProvider, usePageContent } from './context/PageContentContext';
+import { CategoryProvider } from './context/CategoryContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -49,6 +50,7 @@ function PageRoute({ slug, children }) {
 export default function App() {
   return (
     <AuthProvider>
+      <CategoryProvider>
       <ProductProvider>
         <GiftSettingsProvider>
         <PageContentProvider>
@@ -78,6 +80,7 @@ export default function App() {
         </PageContentProvider>
         </GiftSettingsProvider>
       </ProductProvider>
+      </CategoryProvider>
     </AuthProvider>
   );
 }

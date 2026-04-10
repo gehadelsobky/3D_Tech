@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { categories } from '../data/products';
 import { useProducts } from '../context/ProductContext';
 import { useGiftSettings } from '../context/GiftSettingsContext';
+import { useCategories } from '../context/CategoryContext';
 import ProductCard from '../components/ProductCard';
 
 const steps = [
@@ -88,6 +88,7 @@ function getRecommendations(answers, products, settings) {
 export default function GiftFinder() {
   const { products, loading: productsLoading } = useProducts();
   const { settings, loading: settingsLoading } = useGiftSettings();
+  const { categories } = useCategories();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);

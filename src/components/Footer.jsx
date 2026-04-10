@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { usePageContent } from '../context/PageContentContext';
+import { useCategories } from '../context/CategoryContext';
 
 export default function Footer() {
   const { global: g, pagesMeta } = usePageContent();
+  const { categories } = useCategories();
   const hiddenSlugs = useMemo(() => new Set((pagesMeta || []).filter(p => p.hidden).map(p => p.slug)), [pagesMeta]);
   const customPages = (pagesMeta || []).filter((p) => p.is_custom && !p.hidden);
 
@@ -20,15 +22,13 @@ export default function Footer() {
             </p>
           </div>
 
-          {!hiddenSlugs.has('products') && (
+          {!hiddenSlugs.has('products') && categories.length > 0 && (
           <div>
             <h4 className="text-white font-semibold text-sm mb-3">Products</h4>
             <ul className="space-y-2 list-none p-0 m-0">
-              <li><Link to="/products?cat=usb" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">USB Drives</Link></li>
-              <li><Link to="/products?cat=chargers" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Chargers</Link></li>
-              <li><Link to="/products?cat=keychains" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Keychains</Link></li>
-              <li><Link to="/products?cat=desk" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Desk Accessories</Link></li>
-              <li><Link to="/products?cat=drinkware" className="text-sm text-gray-400 hover:text-white no-underline transition-colors">Drinkware</Link></li>
+              {categories.slice(0, 6).map((cat) => (
+                <li key={cat.id}><Link to={`/products?cat=${cat.id}`} className="text-sm text-gray-400 hover:text-white no-underline transition-colors">{cat.name}</Link></li>
+              ))}
             </ul>
           </div>
           )}

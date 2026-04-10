@@ -11,6 +11,7 @@ import roleRoutes from './routes/roles.js';
 import pageRoutes from './routes/pages.js';
 import formRoutes from './routes/forms.js';
 import settingsRoutes from './routes/settings.js';
+import categoryRoutes from './routes/categories.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/pages', pageRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Serve frontend static files (production)
 app.use(express.static(path.join(__dirname, '..', 'dist')));

@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { categories } from '../data/products';
 import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
+import { useCategories } from '../context/CategoryContext';
 import ProductCard from '../components/ProductCard';
 
 function useDebounce(value, delay) {
@@ -17,6 +17,7 @@ function useDebounce(value, delay) {
 export default function Products() {
   const { products, loading } = useProducts();
   const { content: c } = usePageContent('products');
+  const { categories } = useCategories();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);

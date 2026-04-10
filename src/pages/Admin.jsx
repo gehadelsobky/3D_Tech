@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGiftSettings } from '../context/GiftSettingsContext';
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '../lib/api';
 import { usePageContent } from '../context/PageContentContext';
-import { categories } from '../data/products';
+import { useCategories } from '../context/CategoryContext';
 
 const emptyProduct = {
   name: '',
@@ -138,6 +138,7 @@ export default function Admin() {
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
   const { user, logout, hasPermission, isSuperAdmin, changePassword, updateProfile, refreshUser } = useAuth();
   const { settings, updateSettings } = useGiftSettings();
+  const { categories, refreshCategories } = useCategories();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('products');
   const [editing, setEditing] = useState(null);
@@ -528,6 +529,66 @@ export default function Admin() {
       setSmtpError(err.message || 'Failed to send test email');
     } finally {
       setSendingTest(false);
+    }
+  };
+
+  // ==================== CATEGORIES STATE ====================
+  const [editingCat, setEditingCat] = useState(null); // category object or 'new'
+  const [catForm, setCatForm] = useState(null);
+  const [catError, setCatError] = useState('');
+  const [catSaving, setCatSaving] = useState(false);
+
+  const startNewCat = () => {
+    setEditingCat('new');
+    setCatForm({ id: '', name: '', icon: '', description: '' });
+    setCatError('');
+  };
+
+  const startEditCat = (cat) => {
+    setEditingCat(cat);
+    setCatForm({ id: cat.id, name: cat.name, icon: cat.icon, description: cat.description, is_active: cat.is_active });
+    setCatError('');
+  };
+
+  const cancelCat = () => { setEditingCat(null); setCatForm(null); setCatError(''); };
+
+  const saveCat = async () => {
+    if (!catForm.name.trim()) { setCatError('Name is required'); return; }
+    setCatError('');
+    setCatSaving(true);
+    try {
+      if (editingCat === 'new') {
+        const slug = catForm.id || catForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        await apiPost('/categories', { ...catForm, id: slug });
+      } else {
+        await apiPut(`/categories/${editingCat.id}`, catForm);
+      }
+      cancelCat();
+      refreshCategories();
+    } catch (err) {
+      setCatError(err.message || 'Failed to save');
+    } finally {
+      setCatSaving(false);
+    }
+  };
+
+  const deleteCat = async (id) => {
+    if (!confirm('Delete this category?')) return;
+    setCatError('');
+    try {
+      await apiDelete(`/categories/${id}`);
+      refreshCategories();
+    } catch (err) {
+      setCatError(err.message || 'Failed to delete');
+    }
+  };
+
+  const toggleCatActive = async (cat) => {
+    try {
+      await apiPut(`/categories/${cat.id}`, { ...cat, is_active: cat.is_active ? 0 : 1 });
+      refreshCategories();
+    } catch (err) {
+      setCatError(err.message);
     }
   };
 
@@ -1002,6 +1063,7 @@ export default function Admin() {
             hasPermission('users.view') && { key: 'users', label: 'Users' },
             hasPermission('roles.manage') && { key: 'roles', label: 'Roles' },
             hasPermission('pages.edit') && { key: 'pages', label: 'Pages' },
+            hasPermission('products.view') && { key: 'categories', label: 'Categories' },
             hasPermission('forms.view') && { key: 'forms', label: 'Forms' },
             hasPermission('settings.smtp') && { key: 'settings', label: 'Settings' },
           ].filter(Boolean).map((tab) => (
@@ -1760,6 +1822,96 @@ export default function Admin() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== CATEGORIES TAB ==================== */}
+        {activeTab === 'categories' && hasPermission('products.view') && (
+          <>
+            {catError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{catError}</div>}
+
+            {editingCat && catForm ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-text text-lg">{editingCat === 'new' ? 'Add Category' : `Edit: ${editingCat.name}`}</h3>
+                  <div className="flex gap-3">
+                    <button onClick={saveCat} disabled={catSaving} className={btnPrimary}>{catSaving ? 'Saving...' : 'Save'}</button>
+                    <button onClick={cancelCat} className={btnSecondary}>Cancel</button>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {editingCat === 'new' && (
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">ID / Slug *</label>
+                        <input type="text" value={catForm.id} onChange={(e) => setCatForm(prev => ({ ...prev, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} className={'w-full ' + inputClass} placeholder="e.g. usb, chargers" />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Name *</label>
+                      <input type="text" value={catForm.name} onChange={(e) => {
+                        setCatForm(prev => ({
+                          ...prev,
+                          name: e.target.value,
+                          ...(editingCat === 'new' && !prev.id ? { id: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') } : {})
+                        }));
+                      }} className={'w-full ' + inputClass} placeholder="e.g. USB & Flash Drives" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Icon (emoji)</label>
+                      <input type="text" value={catForm.icon} onChange={(e) => setCatForm(prev => ({ ...prev, icon: e.target.value }))} className={'w-full ' + inputClass} placeholder="e.g. 💾" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Description</label>
+                    <input type="text" value={catForm.description} onChange={(e) => setCatForm(prev => ({ ...prev, description: e.target.value }))} className={'w-full ' + inputClass} placeholder="Brief description of this category" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  {hasPermission('products.create') && <button onClick={startNewCat} className={btnPrimary}>+ Add Category</button>}
+                </div>
+
+                <div className="space-y-2">
+                  {categories.map((cat) => (
+                    <div key={cat.id} className={`bg-white rounded-xl border p-4 flex items-center justify-between ${cat.is_active ? 'border-gray-100' : 'border-orange-200 bg-orange-50/30'}`}>
+                      <div className="flex items-center gap-3 flex-1">
+                        <span className="text-2xl">{cat.icon}</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-text text-sm">{cat.name}</h4>
+                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-mono">{cat.id}</span>
+                            {!cat.is_active && <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium">Inactive</span>}
+                          </div>
+                          <p className="text-xs text-text-muted mt-0.5">{cat.description || 'No description'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {hasPermission('products.edit') && (
+                          <>
+                            <button onClick={() => startEditCat(cat)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>
+                            <button
+                              onClick={() => toggleCatActive(cat)}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer border-none transition-colors ${cat.is_active ? 'text-orange-700 bg-orange-50 hover:bg-orange-100' : 'text-green-700 bg-green-50 hover:bg-green-100'}`}
+                            >
+                              {cat.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                          </>
+                        )}
+                        {hasPermission('products.delete') && (
+                          <button onClick={() => deleteCat(cat.id)} className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Delete</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {categories.length === 0 && (
+                    <div className="text-center py-10 text-text-muted">No categories yet.</div>
+                  )}
                 </div>
               </div>
             )}

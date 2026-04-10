@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
-import { categories } from '../data/products';
 import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
+import { useCategories } from '../context/CategoryContext';
 import ProductCard from '../components/ProductCard';
 
 export default function Home() {
   const { products, loading } = useProducts();
   const { content: c } = usePageContent('home');
+  const { categories } = useCategories();
   const featured = products.slice(0, 4);
 
   return (
