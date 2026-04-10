@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
+import SEO from '../components/SEO';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -18,8 +19,29 @@ export default function ProductDetail() {
 
   if (!product) return <Navigate to="/products" />;
 
+  const images = product.images ? JSON.parse(product.images) : (product.image ? [product.image] : []);
+  const productStructuredData = useMemo(() => ({
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description,
+    image: images[0] || undefined,
+    offers: product.price ? {
+      '@type': 'Offer',
+      price: product.price,
+      priceCurrency: 'EGP',
+      availability: 'https://schema.org/InStock',
+    } : undefined,
+  }), [product]);
+
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title={product.name}
+        description={product.description?.slice(0, 160) || `${product.name} - Custom 3D printed product by 3D Tech`}
+        image={images[0] || undefined}
+        structuredData={productStructuredData}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-text-muted mb-8">

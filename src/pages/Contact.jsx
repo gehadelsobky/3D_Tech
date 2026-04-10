@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useGiftSettings } from '../context/GiftSettingsContext';
 import { usePageContent } from '../context/PageContentContext';
 import { apiPost } from '../lib/api';
+import SEO from '../components/SEO';
 
 const initialForm = {
   name: '',
@@ -106,6 +107,10 @@ export default function Contact() {
 
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title="Get a Quote"
+        description="Contact 3D Tech for custom 3D printed products and corporate giveaways. Request a quote for your next project or event."
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Form */}

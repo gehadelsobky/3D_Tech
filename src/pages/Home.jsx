@@ -3,6 +3,7 @@ import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 
 export default function Home() {
   const { products, loading } = useProducts();
@@ -12,6 +13,10 @@ export default function Home() {
 
   return (
     <main>
+      <SEO
+        title={null}
+        description="Custom 3D printed promotional products, corporate giveaways, and branded merchandise. Engineering models, prototyping, and premium corporate gifts in Egypt."
+      />
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-accent-dark via-accent to-primary-dark overflow-hidden">
         <div className="absolute inset-0 opacity-10">

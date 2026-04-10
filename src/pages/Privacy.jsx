@@ -1,4 +1,5 @@
 import { usePageContent } from '../context/PageContentContext';
+import SEO from '../components/SEO';
 
 export default function Privacy() {
   const { global: g } = usePageContent();
@@ -7,6 +8,10 @@ export default function Privacy() {
 
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title="Privacy Policy"
+        description={`Privacy policy for ${company}. Learn how we collect, use, and protect your personal information.`}
+      />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h1 className="text-3xl font-bold text-text mb-8">Privacy Policy</h1>
 

@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initDb } from './db.js';
+import db, { initDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import giftSettingsRoutes from './routes/gift-settings.js';
@@ -93,6 +93,52 @@ app.use('/api/forms', formRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
+
+// Sitemap.xml — dynamic generation
+app.get('/sitemap.xml', (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+  // Get all products for product URLs
+  let productUrls = '';
+  try {
+    const products = db.prepare('SELECT id, updated_at FROM products').all();
+    productUrls = products.map(p =>
+      `  <url><loc>${baseUrl}/products/${p.id}</loc><lastmod>${p.updated_at ? p.updated_at.split(' ')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq></url>`
+    ).join('\n');
+  } catch { /* ignore if table doesn't exist yet */ }
+
+  // Get visible custom pages
+  let customPageUrls = '';
+  try {
+    const pages = db.prepare("SELECT slug FROM page_content WHERE slug NOT IN ('global')").all();
+    const meta = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('pages_meta');
+    const pagesMeta = meta ? JSON.parse(meta.value) : [];
+    const hiddenSlugs = new Set(pagesMeta.filter(p => p.hidden).map(p => p.slug));
+    const customPages = pagesMeta.filter(p => p.is_custom && !p.hidden);
+
+    customPageUrls = customPages.map(p =>
+      `  <url><loc>${baseUrl}/page/${p.slug}</loc><changefreq>monthly</changefreq></url>`
+    ).join('\n');
+  } catch { /* ignore */ }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${baseUrl}/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>${baseUrl}/products</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>${baseUrl}/services</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>${baseUrl}/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>${baseUrl}/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>${baseUrl}/gift-finder</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>${baseUrl}/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+${productUrls}
+${customPageUrls}
+</urlset>`;
+
+  res.set('Content-Type', 'application/xml');
+  res.send(xml);
+});
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

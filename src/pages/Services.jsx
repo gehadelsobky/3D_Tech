@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { usePageContent } from '../context/PageContentContext';
+import SEO from '../components/SEO';
 
 const defaultPrintingServices = [
   {
@@ -116,6 +117,10 @@ export default function Services() {
 
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title="Services"
+        description="3D printing services: engineering models, rapid prototyping, mechanical parts, graduation projects. Corporate gift solutions for every occasion."
+      />
       {/* Hero */}
       <section className="bg-gradient-to-br from-accent-dark via-accent to-primary-dark">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">

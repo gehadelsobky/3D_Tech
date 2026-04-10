@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { usePageContent } from '../context/PageContentContext';
+import SEO from '../components/SEO';
 
 const defaultValues = [
   { title: 'Customer First', description: 'Respecting customer needs, delivering a distinctive experience, and maintaining high quality with attention to the smallest details that matter to them.', icon: '👤' },
@@ -37,6 +38,10 @@ export default function About() {
 
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title="About Us"
+        description="Learn about 3D Tech — Egypt's leading 3D printing company specializing in custom promotional products, engineering models, and corporate giveaways."
+      />
       {/* Hero */}
       <section className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">

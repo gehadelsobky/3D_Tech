@@ -4,6 +4,7 @@ import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 
 function useDebounce(value, delay) {
   const [debounced, setDebounced] = useState(value);
@@ -52,6 +53,10 @@ export default function Products() {
 
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title="Products"
+        description="Browse our collection of custom 3D printed promotional products, corporate giveaways, keychains, USB drives, desk accessories and more."
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
         <div className="mb-8">

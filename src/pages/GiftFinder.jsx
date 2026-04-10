@@ -4,6 +4,7 @@ import { useProducts } from '../context/ProductContext';
 import { useGiftSettings } from '../context/GiftSettingsContext';
 import { useCategories } from '../context/CategoryContext';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 
 const steps = [
   { key: 'occasion', label: 'Purpose', question: 'What is the purpose?' },
@@ -141,6 +142,10 @@ export default function GiftFinder() {
 
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title="Gift Finder"
+        description="Find the perfect corporate gift with our interactive Gift Finder. Filter by occasion, budget, audience, and quantity to discover ideal promotional products."
+      />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-text mb-3">Gift Finder</h1>
