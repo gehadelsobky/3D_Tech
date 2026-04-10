@@ -8,6 +8,21 @@ import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
 import ImageUploader from '../components/ImageUploader';
 
+// Download CSV helper
+function downloadCSV(endpoint, filename) {
+  const token = localStorage.getItem('auth_token');
+  fetch(`/api/export/${endpoint}`, { headers: { Authorization: `Bearer ${token}` } })
+    .then(r => { if (!r.ok) throw new Error('Export failed'); return r.blob(); })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename || `${endpoint}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    })
+    .catch(err => alert(err.message));
+}
+
 const emptyProduct = {
   name: '',
   category: 'usb',
@@ -1364,7 +1379,8 @@ export default function Admin() {
         {/* ==================== PRODUCTS TAB ==================== */}
         {activeTab === 'products' && (
           <>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-2 mb-4">
+              <button onClick={() => downloadCSV('products', 'products.csv')} className={btnSecondary}>Export CSV</button>
               {!editing && hasPermission('products.create') && <button onClick={startAdd} className={btnPrimary}>+ Add Product</button>}
             </div>
 
@@ -1749,7 +1765,8 @@ export default function Admin() {
         {/* ==================== USERS TAB ==================== */}
         {activeTab === 'users' && hasPermission('users.view') && (
           <>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-2 mb-4">
+              <button onClick={() => downloadCSV('users', 'users.csv')} className={btnSecondary}>Export CSV</button>
               {!editingUser && hasPermission('users.create') && <button onClick={startAddUser} className={btnPrimary}>+ Add User</button>}
             </div>
 
@@ -2227,6 +2244,9 @@ export default function Admin() {
         {/* ==================== FORMS TAB ==================== */}
         {activeTab === 'forms' && hasPermission('forms.view') && (
           <>
+            <div className="flex justify-end mb-4">
+              <button onClick={() => downloadCSV('submissions', 'submissions.csv')} className={btnSecondary}>Export All Submissions</button>
+            </div>
             {formsError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{formsError}</div>
             )}
@@ -2483,7 +2503,10 @@ export default function Admin() {
           <>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold text-text">{blogPosts.length} Blog Posts</h3>
-              {!editingBlog && <button onClick={startNewBlog} className={btnPrimary}>+ New Post</button>}
+              <div className="flex gap-2">
+                <button onClick={() => downloadCSV('blog', 'blog_posts.csv')} className={btnSecondary}>Export CSV</button>
+                {!editingBlog && <button onClick={startNewBlog} className={btnPrimary}>+ New Post</button>}
+              </div>
             </div>
 
             {blogError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{blogError}</div>}
