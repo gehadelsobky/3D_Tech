@@ -3,6 +3,7 @@ import db from '../db.js';
 import { ALL_PERMISSIONS } from '../permissions.js';
 
 export const JWT_SECRET = process.env.JWT_SECRET || '3dtech_jwt_secret_key_2024';
+// In production, JWT_SECRET MUST be set as an environment variable
 
 export function authenticate(req, res, next) {
   const header = req.headers.authorization;

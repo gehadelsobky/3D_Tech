@@ -3,6 +3,17 @@ import db from './db.js';
 
 let transporter = null;
 
+// Escape HTML to prevent XSS in email notifications
+function escapeHtml(str) {
+  if (typeof str !== 'string') return String(str ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function getSmtpSettings() {
   const row = db.prepare("SELECT value FROM app_settings WHERE key = 'smtp'").get();
   if (!row) return null;
@@ -65,12 +76,12 @@ export async function sendFormNotification(formName, submissionData) {
 
   const fields = Object.entries(submissionData)
     .filter(([k]) => k !== '_hp')
-    .map(([k, v]) => `<tr><td style="padding:6px 12px;font-weight:600;color:#555;border-bottom:1px solid #eee">${k}</td><td style="padding:6px 12px;border-bottom:1px solid #eee">${v || '—'}</td></tr>`)
+    .map(([k, v]) => `<tr><td style="padding:6px 12px;font-weight:600;color:#555;border-bottom:1px solid #eee">${escapeHtml(k)}</td><td style="padding:6px 12px;border-bottom:1px solid #eee">${escapeHtml(v) || '—'}</td></tr>`)
     .join('');
 
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#333">New Submission: ${formName}</h2>
+      <h2 style="color:#333">New Submission: ${escapeHtml(formName)}</h2>
       <table style="width:100%;border-collapse:collapse;margin-top:16px">
         ${fields}
       </table>
