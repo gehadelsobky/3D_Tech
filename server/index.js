@@ -207,6 +207,23 @@ app.get('/{*splat}', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
+// ---------- Global Error Handler ----------
+app.use((err, _req, res, _next) => {
+  const status = err.status || err.statusCode || 500;
+  const message = status === 500 ? 'Internal server error' : err.message;
+
+  // Log with timestamp and stack trace for 500s
+  const timestamp = new Date().toISOString();
+  if (status >= 500) {
+    console.error(`[${timestamp}] ERROR ${status}:`, err.message);
+    if (err.stack) console.error(err.stack);
+  } else {
+    console.warn(`[${timestamp}] WARN ${status}: ${err.message}`);
+  }
+
+  res.status(status).json({ error: message });
+});
+
 // ---------- JWT Secret Warning ----------
 if (!process.env.JWT_SECRET) {
   console.warn('⚠️  WARNING: JWT_SECRET is not set. Using default secret — NOT SAFE for production!');

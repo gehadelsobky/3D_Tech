@@ -8,6 +8,7 @@ import { CategoryProvider } from './context/CategoryContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy-loaded pages — each becomes a separate JS chunk
 const Home = lazy(() => import('./pages/Home'));
@@ -59,6 +60,7 @@ export default function App() {
           <div className="min-h-screen flex flex-col">
             <Header />
             <div className="flex-1">
+              <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<PageRoute slug="home"><Home /></PageRoute>} />
@@ -76,6 +78,7 @@ export default function App() {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
+              </ErrorBoundary>
             </div>
             <Footer />
           </div>
