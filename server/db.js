@@ -74,6 +74,11 @@ export function initDb() {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT '{}'
+    );
+
     CREATE TABLE IF NOT EXISTS page_content (
       slug TEXT PRIMARY KEY,
       title TEXT,

@@ -460,6 +460,77 @@ export default function Admin() {
     setViewingSubmission(null);
   };
 
+  // ==================== SMTP SETTINGS STATE ====================
+  const [smtpForm, setSmtpForm] = useState({ host: '', port: 587, secure: false, user: '', pass: '', from: '', notifyEmail: '' });
+  const [smtpLoading, setSmtpLoading] = useState(false);
+  const [smtpSaving, setSmtpSaving] = useState(false);
+  const [smtpError, setSmtpError] = useState('');
+  const [smtpSuccess, setSmtpSuccess] = useState('');
+  const [smtpTesting, setSmtpTesting] = useState(false);
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
+
+  const loadSmtp = useCallback(async () => {
+    setSmtpLoading(true);
+    try {
+      const data = await apiGet('/settings/smtp');
+      setSmtpForm(prev => ({ ...prev, ...data }));
+    } catch {
+      // No settings saved yet
+    } finally {
+      setSmtpLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasPermission('settings.smtp') && activeTab === 'settings') {
+      loadSmtp();
+    }
+  }, [activeTab, hasPermission, loadSmtp]);
+
+  const saveSmtp = async () => {
+    setSmtpError('');
+    setSmtpSuccess('');
+    setSmtpSaving(true);
+    try {
+      await apiPut('/settings/smtp', smtpForm);
+      setSmtpSuccess('SMTP settings saved successfully');
+    } catch (err) {
+      setSmtpError(err.message || 'Failed to save');
+    } finally {
+      setSmtpSaving(false);
+    }
+  };
+
+  const testSmtpConnection = async () => {
+    setSmtpError('');
+    setSmtpSuccess('');
+    setSmtpTesting(true);
+    try {
+      const result = await apiPost('/settings/smtp/test', smtpForm);
+      setSmtpSuccess(result.message);
+    } catch (err) {
+      setSmtpError(err.message || 'Connection failed');
+    } finally {
+      setSmtpTesting(false);
+    }
+  };
+
+  const sendTestEmail = async () => {
+    if (!testEmailTo.trim()) { setSmtpError('Enter a recipient email'); return; }
+    setSmtpError('');
+    setSmtpSuccess('');
+    setSendingTest(true);
+    try {
+      const result = await apiPost('/settings/smtp/test-email', { to: testEmailTo });
+      setSmtpSuccess(result.message);
+    } catch (err) {
+      setSmtpError(err.message || 'Failed to send test email');
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
@@ -932,6 +1003,7 @@ export default function Admin() {
             hasPermission('roles.manage') && { key: 'roles', label: 'Roles' },
             hasPermission('pages.edit') && { key: 'pages', label: 'Pages' },
             hasPermission('forms.view') && { key: 'forms', label: 'Forms' },
+            hasPermission('settings.smtp') && { key: 'settings', label: 'Settings' },
           ].filter(Boolean).map((tab) => (
             <button
               key={tab.key}
@@ -1943,6 +2015,99 @@ export default function Admin() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== SETTINGS TAB ==================== */}
+        {activeTab === 'settings' && hasPermission('settings.smtp') && (
+          <>
+            {smtpError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{smtpError}</div>}
+            {smtpSuccess && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{smtpSuccess}</div>}
+
+            {smtpLoading ? (
+              <div className="text-center py-10 text-text-muted">Loading settings...</div>
+            ) : (
+              <div className="space-y-6">
+                {/* SMTP Configuration */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  <h3 className="font-semibold text-text text-lg">SMTP Email Configuration</h3>
+                  <p className="text-xs text-text-muted">Configure your email server to send notifications when form submissions are received.</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">SMTP Host *</label>
+                      <input type="text" value={smtpForm.host} onChange={(e) => setSmtpForm(prev => ({ ...prev, host: e.target.value }))} className={'w-full ' + inputClass} placeholder="smtp.gmail.com" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Port *</label>
+                        <input type="number" value={smtpForm.port} onChange={(e) => setSmtpForm(prev => ({ ...prev, port: parseInt(e.target.value) || 587 }))} className={'w-full ' + inputClass} />
+                      </div>
+                      <div className="flex items-end pb-1">
+                        <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer">
+                          <input type="checkbox" checked={smtpForm.secure || false} onChange={(e) => setSmtpForm(prev => ({ ...prev, secure: e.target.checked }))} />
+                          SSL/TLS (port 465)
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Username</label>
+                      <input type="text" value={smtpForm.user} onChange={(e) => setSmtpForm(prev => ({ ...prev, user: e.target.value }))} className={'w-full ' + inputClass} placeholder="your@email.com" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Password</label>
+                      <input type="password" value={smtpForm.pass} onChange={(e) => setSmtpForm(prev => ({ ...prev, pass: e.target.value }))} className={'w-full ' + inputClass} placeholder="App password or SMTP password" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">From Address</label>
+                      <input type="text" value={smtpForm.from} onChange={(e) => setSmtpForm(prev => ({ ...prev, from: e.target.value }))} className={'w-full ' + inputClass} placeholder="3DTech <noreply@3dtecheg.com>" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Notification Email</label>
+                      <input type="email" value={smtpForm.notifyEmail} onChange={(e) => setSmtpForm(prev => ({ ...prev, notifyEmail: e.target.value }))} className={'w-full ' + inputClass} placeholder="admin@3dtecheg.com" />
+                      <p className="text-[10px] text-text-muted mt-1">Receives form submission notifications</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={saveSmtp} disabled={smtpSaving} className={btnPrimary}>{smtpSaving ? 'Saving...' : 'Save Settings'}</button>
+                    <button onClick={testSmtpConnection} disabled={smtpTesting} className={btnSecondary}>{smtpTesting ? 'Testing...' : 'Test Connection'}</button>
+                  </div>
+                </div>
+
+                {/* Test Email */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  <h3 className="font-semibold text-text">Send Test Email</h3>
+                  <p className="text-xs text-text-muted">Save your SMTP settings first, then send a test email to verify everything works.</p>
+                  <div className="flex gap-3">
+                    <input type="email" value={testEmailTo} onChange={(e) => setTestEmailTo(e.target.value)} className={inputClass + ' flex-1'} placeholder="recipient@example.com" />
+                    <button onClick={sendTestEmail} disabled={sendingTest} className={btnPrimary}>{sendingTest ? 'Sending...' : 'Send Test'}</button>
+                  </div>
+                </div>
+
+                {/* Common SMTP Presets */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                  <h3 className="font-semibold text-text">Quick Setup Presets</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { label: 'Gmail', host: 'smtp.gmail.com', port: 587, secure: false },
+                      { label: 'Outlook', host: 'smtp-mail.outlook.com', port: 587, secure: false },
+                      { label: 'Yahoo', host: 'smtp.mail.yahoo.com', port: 465, secure: true },
+                      { label: 'Zoho', host: 'smtp.zoho.com', port: 465, secure: true },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        onClick={() => setSmtpForm(prev => ({ ...prev, host: preset.host, port: preset.port, secure: preset.secure }))}
+                        className="px-3 py-2 text-xs font-medium text-text-muted bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-text-muted">For Gmail, use an App Password (not your regular password). Enable 2FA first, then generate one at myaccount.google.com → Security → App passwords.</p>
+                </div>
               </div>
             )}
           </>

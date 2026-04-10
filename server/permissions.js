@@ -70,7 +70,6 @@ export const PERMISSION_GROUPS = [
   },
   {
     label: 'Settings',
-    soon: true,
     permissions: [
       { key: 'settings.smtp', label: 'SMTP Configuration' },
     ],

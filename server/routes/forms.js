@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
+import { sendFormNotification } from '../email.js';
 
 const router = Router();
 
@@ -80,7 +81,7 @@ router.delete('/:id', authenticate, requirePermission('forms.delete'), (req, res
 
 // POST /api/forms/:slug/submit — public submission
 router.post('/:slug/submit', (req, res) => {
-  const form = db.prepare('SELECT id, fields FROM form_definitions WHERE slug = ? AND is_active = 1').get(req.params.slug);
+  const form = db.prepare('SELECT id, name, fields FROM form_definitions WHERE slug = ? AND is_active = 1').get(req.params.slug);
   if (!form) return res.status(404).json({ error: 'Form not found' });
 
   const fields = JSON.parse(form.fields);
@@ -97,6 +98,10 @@ router.post('/:slug/submit', (req, res) => {
   }
 
   db.prepare("INSERT INTO form_submissions (form_id, data) VALUES (?, ?)").run(form.id, JSON.stringify(data));
+
+  // Send email notification (fire and forget)
+  sendFormNotification(form.name, data).catch(() => {});
+
   res.status(201).json({ success: true });
 });
 
