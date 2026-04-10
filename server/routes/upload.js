@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -37,8 +37,8 @@ const upload = multer({
 
 const router = Router();
 
-// POST /api/upload — upload a single image (authenticated)
-router.post('/', authenticate, (req, res) => {
+// POST /api/upload — upload a single image
+router.post('/', authenticate, requirePermission('files.upload'), (req, res) => {
   upload.single('image')(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
@@ -54,8 +54,8 @@ router.post('/', authenticate, (req, res) => {
   });
 });
 
-// POST /api/upload/multiple — upload multiple images (authenticated)
-router.post('/multiple', authenticate, (req, res) => {
+// POST /api/upload/multiple — upload multiple images
+router.post('/multiple', authenticate, requirePermission('files.upload'), (req, res) => {
   upload.array('images', 10)(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
@@ -72,8 +72,8 @@ router.post('/multiple', authenticate, (req, res) => {
   });
 });
 
-// DELETE /api/upload/:filename — delete an uploaded file (authenticated)
-router.delete('/:filename', authenticate, (req, res) => {
+// DELETE /api/upload/:filename — delete an uploaded file
+router.delete('/:filename', authenticate, requirePermission('files.delete'), (req, res) => {
   const { filename } = req.params;
   // Sanitize filename to prevent directory traversal
   const safe = path.basename(filename);

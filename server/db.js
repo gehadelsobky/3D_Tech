@@ -141,6 +141,9 @@ export function initDb() {
     console.log('Seeded default roles (Super Admin, Admin, Editor)');
   }
 
+  // ---- Migration: ensure Admin & Editor roles have up-to-date permissions ----
+  migrateRolePermissions();
+
   // ---- Backfill role_id from old role TEXT column ----
   const needsBackfill = db.prepare('SELECT COUNT(*) as count FROM users WHERE role_id IS NULL').get();
   if (needsBackfill.count > 0) {
@@ -219,21 +222,57 @@ function seedRoles() {
     // Super Admin — is_system, all permissions implied in code (no rows needed)
     insertRole.run('Super Admin', 'super_admin', 1);
 
-    // Admin — broad access
+    // Admin — broad access (everything except role management and SMTP)
     const adminResult = insertRole.run('Admin', 'admin', 0);
     const adminPerms = [
       'products.view', 'products.create', 'products.edit', 'products.delete',
-      'users.view',
+      'users.view', 'users.create', 'users.edit',
       'gift_settings.view', 'gift_settings.edit',
+      'pages.view', 'pages.edit',
+      'forms.view', 'forms.create', 'forms.edit', 'forms.delete',
+      'files.upload', 'files.delete',
     ];
     for (const p of adminPerms) insertPerm.run(adminResult.lastInsertRowid, p);
 
-    // Editor — limited access
+    // Editor — content management only
     const editorResult = insertRole.run('Editor', 'editor', 0);
-    const editorPerms = ['products.view', 'products.edit', 'gift_settings.view'];
+    const editorPerms = [
+      'products.view', 'products.create', 'products.edit',
+      'gift_settings.view',
+      'pages.view', 'pages.edit',
+      'forms.view', 'forms.create', 'forms.edit',
+      'files.upload',
+    ];
     for (const p of editorPerms) insertPerm.run(editorResult.lastInsertRowid, p);
   });
   seed();
+}
+
+function migrateRolePermissions() {
+  const adminPerms = [
+    'products.view', 'products.create', 'products.edit', 'products.delete',
+    'users.view', 'users.create', 'users.edit',
+    'gift_settings.view', 'gift_settings.edit',
+    'pages.view', 'pages.edit',
+    'forms.view', 'forms.create', 'forms.edit', 'forms.delete',
+    'files.upload', 'files.delete',
+  ];
+  const editorPerms = [
+    'products.view', 'products.create', 'products.edit',
+    'gift_settings.view',
+    'pages.view', 'pages.edit',
+    'forms.view', 'forms.create', 'forms.edit',
+    'files.upload',
+  ];
+
+  const insertPerm = db.prepare('INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES (?, ?)');
+  const migrate = db.transaction(() => {
+    const adminRole = db.prepare("SELECT id FROM roles WHERE slug = 'admin'").get();
+    const editorRole = db.prepare("SELECT id FROM roles WHERE slug = 'editor'").get();
+    if (adminRole) for (const p of adminPerms) insertPerm.run(adminRole.id, p);
+    if (editorRole) for (const p of editorPerms) insertPerm.run(editorRole.id, p);
+  });
+  migrate();
 }
 
 function backfillRoleIds() {
