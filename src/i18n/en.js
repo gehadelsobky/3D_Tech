@@ -8,6 +8,7 @@ export default {
     about: 'About',
     contact: 'Get a Quote',
     privacy: 'Privacy Policy',
+    blog: 'Blog',
     requestQuote: 'Request Quote',
   },
 

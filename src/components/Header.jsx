@@ -9,6 +9,7 @@ const coreNavLinks = [
   { to: '/products', labelKey: 'nav.products', slug: 'products' },
   { to: '/gift-finder', labelKey: 'nav.giftFinder' },
   { to: '/about', labelKey: 'nav.about', slug: 'about' },
+  { to: '/blog', labelKey: 'nav.blog' },
   { to: '/contact', labelKey: 'nav.contact', slug: 'contact' },
 ];
 

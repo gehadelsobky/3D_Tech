@@ -97,6 +97,20 @@ export function initDb() {
       is_custom INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS blog_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      excerpt TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL DEFAULT '',
+      cover_image TEXT NOT NULL DEFAULT '',
+      author TEXT NOT NULL DEFAULT 'Admin',
+      status TEXT NOT NULL DEFAULT 'draft',
+      tags TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // ---- Ensure users table exists (legacy or fresh) ----

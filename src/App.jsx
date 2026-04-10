@@ -24,6 +24,8 @@ const Login = lazy(() => import('./pages/Login'));
 const CustomPage = lazy(() => import('./pages/CustomPage'));
 const FormPage = lazy(() => import('./pages/FormPage'));
 const Services = lazy(() => import('./pages/Services'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function PageLoader() {
@@ -73,6 +75,8 @@ export default function App() {
                   <Route path="/about" element={<PageRoute slug="about"><About /></PageRoute>} />
                   <Route path="/contact" element={<PageRoute slug="contact"><Contact /></PageRoute>} />
                   <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<BlogPost />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="/page/:slug" element={<CustomPage />} />

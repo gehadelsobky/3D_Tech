@@ -8,6 +8,7 @@ export default {
     about: 'من نحن',
     contact: 'طلب عرض سعر',
     privacy: 'سياسة الخصوصية',
+    blog: 'المقالات',
     requestQuote: 'طلب عرض سعر',
   },
 

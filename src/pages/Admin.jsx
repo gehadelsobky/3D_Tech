@@ -146,6 +146,16 @@ export default function Admin() {
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [newSubmissionCount, setNewSubmissionCount] = useState(0);
   const [adminProductSearch, setAdminProductSearch] = useState('');
+
+  // Blog state
+  const [blogPosts, setBlogPosts] = useState([]);
+  const [blogLoading, setBlogLoading] = useState(false);
+  const [blogError, setBlogError] = useState('');
+  const [blogSaving, setBlogSaving] = useState(false);
+  const [editingBlog, setEditingBlog] = useState(null);
+  const [blogForm, setBlogForm] = useState(null);
+  const [confirmDeleteBlog, setConfirmDeleteBlog] = useState(null);
+
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -372,6 +382,57 @@ export default function Admin() {
   useEffect(() => {
     if (dashboardStats) setNewSubmissionCount(dashboardStats.newSubmissions || 0);
   }, [dashboardStats]);
+
+  // Blog functions
+  const fetchBlog = useCallback(async () => {
+    setBlogLoading(true);
+    try {
+      const data = await apiGet('/blog');
+      setBlogPosts(data);
+    } catch { setBlogError('Failed to load posts'); }
+    finally { setBlogLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (hasPermission('pages.edit') && activeTab === 'blog') fetchBlog();
+  }, [activeTab, hasPermission, fetchBlog]);
+
+  const startNewBlog = () => {
+    setEditingBlog('new');
+    setBlogForm({ title: '', slug: '', excerpt: '', content: '', cover_image: '', author: 'Admin', status: 'draft', tags: [] });
+    setBlogError('');
+  };
+
+  const startEditBlog = (post) => {
+    setEditingBlog(post);
+    setBlogForm({ title: post.title, slug: post.slug, excerpt: post.excerpt, content: post.content, cover_image: post.cover_image, author: post.author, status: post.status, tags: post.tags || [] });
+    setBlogError('');
+  };
+
+  const cancelBlog = () => { setEditingBlog(null); setBlogForm(null); setBlogError(''); };
+
+  const saveBlog = async () => {
+    setBlogSaving(true);
+    setBlogError('');
+    try {
+      if (editingBlog === 'new') {
+        await apiPost('/blog', blogForm);
+      } else {
+        await apiPut(`/blog/${editingBlog.id}`, blogForm);
+      }
+      cancelBlog();
+      fetchBlog();
+    } catch (err) { setBlogError(err.message); }
+    finally { setBlogSaving(false); }
+  };
+
+  const deleteBlog = async (id) => {
+    try {
+      await apiDelete(`/blog/${id}`);
+      setConfirmDeleteBlog(null);
+      fetchBlog();
+    } catch (err) { setBlogError(err.message); }
+  };
 
   const startNewForm = () => {
     setEditingForm('new');
@@ -1168,6 +1229,7 @@ export default function Admin() {
             hasPermission('pages.edit') && { key: 'pages', label: 'Pages' },
             hasPermission('products.view') && { key: 'categories', label: 'Categories' },
             hasPermission('forms.view') && { key: 'forms', label: 'Forms', badge: newSubmissionCount },
+            hasPermission('pages.edit') && { key: 'blog', label: 'Blog' },
             hasPermission('pages.edit') && { key: 'layout', label: 'Header & Footer' },
             hasPermission('settings.smtp') && { key: 'settings', label: 'Settings' },
           ].filter(Boolean).map((tab) => (
@@ -2411,6 +2473,103 @@ export default function Admin() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==================== BLOG TAB ==================== */}
+        {activeTab === 'blog' && hasPermission('pages.edit') && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-text">{blogPosts.length} Blog Posts</h3>
+              {!editingBlog && <button onClick={startNewBlog} className={btnPrimary}>+ New Post</button>}
+            </div>
+
+            {blogError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{blogError}</div>}
+
+            {blogForm && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6 mb-8">
+                <h2 className="font-semibold text-text mb-4">{editingBlog === 'new' ? 'New Blog Post' : 'Edit Post'}</h2>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Title</label>
+                      <input type="text" value={blogForm.title} onChange={(e) => setBlogForm(prev => ({ ...prev, title: e.target.value }))} className={'w-full ' + inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Slug (URL)</label>
+                      <input type="text" value={blogForm.slug} onChange={(e) => setBlogForm(prev => ({ ...prev, slug: e.target.value }))} className={'w-full ' + inputClass} disabled={editingBlog !== 'new'} placeholder="my-blog-post" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Excerpt (short summary)</label>
+                    <textarea value={blogForm.excerpt} onChange={(e) => setBlogForm(prev => ({ ...prev, excerpt: e.target.value }))} rows={2} className={'w-full resize-none ' + inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Content (HTML)</label>
+                    <textarea value={blogForm.content} onChange={(e) => setBlogForm(prev => ({ ...prev, content: e.target.value }))} rows={12} className={'w-full resize-y font-mono text-sm ' + inputClass} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Cover Image URL</label>
+                      <input type="text" value={blogForm.cover_image} onChange={(e) => setBlogForm(prev => ({ ...prev, cover_image: e.target.value }))} className={'w-full ' + inputClass} placeholder="https://..." />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Author</label>
+                      <input type="text" value={blogForm.author} onChange={(e) => setBlogForm(prev => ({ ...prev, author: e.target.value }))} className={'w-full ' + inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Status</label>
+                      <select value={blogForm.status} onChange={(e) => setBlogForm(prev => ({ ...prev, status: e.target.value }))} className={'w-full bg-white ' + inputClass}>
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">Tags (comma separated)</label>
+                    <input type="text" value={(blogForm.tags || []).join(', ')} onChange={(e) => setBlogForm(prev => ({ ...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))} className={'w-full ' + inputClass} placeholder="3d-printing, corporate-gifts" />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <button onClick={saveBlog} disabled={blogSaving} className={btnPrimary}>{blogSaving ? 'Saving...' : 'Save Post'}</button>
+                  <button onClick={cancelBlog} className={btnSecondary}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {blogLoading ? (
+              <div className="text-center py-12 text-text-muted">Loading posts...</div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="divide-y divide-gray-100">
+                  {blogPosts.map((post) => (
+                    <div key={post.id} className="flex items-center gap-4 px-6 py-4">
+                      {post.cover_image && <img src={post.cover_image} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-text text-sm truncate">{post.title}</div>
+                        <div className="text-xs text-text-muted">{post.author} &middot; {new Date(post.created_at).toLocaleDateString()} &middot;
+                          <span className={`ms-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${post.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{post.status}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => startEditBlog(post)} className="px-3 py-1.5 text-xs font-medium text-primary bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Edit</button>
+                        {confirmDeleteBlog === post.id ? (
+                          <div className="flex gap-1">
+                            <button onClick={() => deleteBlog(post.id)} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 cursor-pointer border-none transition-colors">Confirm</button>
+                            <button onClick={() => setConfirmDeleteBlog(null)} className="px-3 py-1.5 text-xs font-medium text-text-muted bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer border-none transition-colors">Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setConfirmDeleteBlog(post.id)} className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer border-none transition-colors">Delete</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {blogPosts.length === 0 && !blogLoading && (
+                    <div className="px-6 py-12 text-center text-text-muted text-sm">No blog posts yet. Create your first post!</div>
+                  )}
+                </div>
               </div>
             )}
           </>

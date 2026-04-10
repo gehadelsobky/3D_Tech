@@ -16,6 +16,7 @@ import formRoutes from './routes/forms.js';
 import settingsRoutes from './routes/settings.js';
 import categoryRoutes from './routes/categories.js';
 import uploadRoutes from './routes/upload.js';
+import blogRoutes from './routes/blog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -97,6 +98,7 @@ app.use('/api/forms', formRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/blog', blogRoutes);
 
 // Dashboard stats endpoint (admin)
 import { authenticate } from './middleware/auth.js';
@@ -165,6 +167,15 @@ app.get('/sitemap.xml', (req, res) => {
     ).join('\n');
   } catch { /* ignore */ }
 
+  // Get published blog posts
+  let blogUrls = '';
+  try {
+    const posts = db.prepare("SELECT slug, updated_at FROM blog_posts WHERE status = 'published'").all();
+    blogUrls = posts.map(p =>
+      `  <url><loc>${baseUrl}/blog/${p.slug}</loc><lastmod>${p.updated_at ? p.updated_at.split(' ')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq></url>`
+    ).join('\n');
+  } catch { /* ignore */ }
+
   const today = new Date().toISOString().split('T')[0];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -175,8 +186,10 @@ app.get('/sitemap.xml', (req, res) => {
   <url><loc>${baseUrl}/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>${baseUrl}/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>${baseUrl}/gift-finder</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>${baseUrl}/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>${baseUrl}/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 ${productUrls}
+${blogUrls}
 ${customPageUrls}
 </urlset>`;
 

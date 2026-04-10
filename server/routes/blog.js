@@ -1,0 +1,78 @@
+import { Router } from 'express';
+import db from '../db.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
+
+const router = Router();
+
+// GET /api/blog — public: published only, admin: all
+router.get('/', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  let rows;
+  if (token) {
+    rows = db.prepare('SELECT * FROM blog_posts ORDER BY created_at DESC').all();
+  } else {
+    rows = db.prepare("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC").all();
+  }
+  res.json(rows.map(r => ({ ...r, tags: JSON.parse(r.tags) })));
+});
+
+// GET /api/blog/:slug — get single post by slug (public: published only)
+router.get('/:slug', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  let row;
+  if (token) {
+    row = db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(req.params.slug);
+  } else {
+    row = db.prepare("SELECT * FROM blog_posts WHERE slug = ? AND status = 'published'").get(req.params.slug);
+  }
+  if (!row) return res.status(404).json({ error: 'Post not found' });
+  res.json({ ...row, tags: JSON.parse(row.tags) });
+});
+
+// POST /api/blog — create a new post
+router.post('/', authenticate, requirePermission('pages.edit'), (req, res) => {
+  const { title, slug: rawSlug, excerpt, content, cover_image, author, status, tags } = req.body;
+  if (!title || !rawSlug) return res.status(400).json({ error: 'Title and slug are required' });
+
+  const slug = rawSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  if (!slug) return res.status(400).json({ error: 'Invalid slug' });
+
+  const existing = db.prepare('SELECT id FROM blog_posts WHERE slug = ?').get(slug);
+  if (existing) return res.status(409).json({ error: 'A post with this slug already exists' });
+
+  const result = db.prepare(
+    "INSERT INTO blog_posts (title, slug, excerpt, content, cover_image, author, status, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(title, slug, excerpt || '', content || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []));
+
+  const created = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(result.lastInsertRowid);
+  res.status(201).json({ ...created, tags: JSON.parse(created.tags) });
+});
+
+// PUT /api/blog/:id — update a post
+router.put('/:id', authenticate, requirePermission('pages.edit'), (req, res) => {
+  const { id } = req.params;
+  const { title, excerpt, content, cover_image, author, status, tags } = req.body;
+
+  const existing = db.prepare('SELECT id FROM blog_posts WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Post not found' });
+
+  db.prepare(`
+    UPDATE blog_posts SET title = ?, excerpt = ?, content = ?, cover_image = ?, author = ?, status = ?, tags = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).run(title, excerpt || '', content || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []), id);
+
+  const updated = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id);
+  res.json({ ...updated, tags: JSON.parse(updated.tags) });
+});
+
+// DELETE /api/blog/:id — delete a post
+router.delete('/:id', authenticate, requirePermission('pages.edit'), (req, res) => {
+  const { id } = req.params;
+  const existing = db.prepare('SELECT id FROM blog_posts WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Post not found' });
+
+  db.prepare('DELETE FROM blog_posts WHERE id = ?').run(id);
+  res.json({ success: true });
+});
+
+export default router;
