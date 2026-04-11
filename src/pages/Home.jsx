@@ -2,13 +2,16 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
+import { useLocalizedProducts, useLocalizedCategories } from '../hooks/useLocalized';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
 export default function Home() {
-  const { products, loading } = useProducts();
+  const { products: rawProducts, loading } = useProducts();
   const { content: c } = usePageContent('home');
-  const { categories } = useCategories();
+  const { categories: rawCategories } = useCategories();
+  const products = useLocalizedProducts(rawProducts);
+  const categories = useLocalizedCategories(rawCategories);
   const featured = products.slice(0, 4);
 
   return (

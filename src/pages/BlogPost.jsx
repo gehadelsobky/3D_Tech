@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { useLocalizedBlogPost } from '../hooks/useLocalized';
 import SEO from '../components/SEO';
 
 export default function BlogPost() {
   const { slug } = useParams();
-  const [post, setPost] = useState(null);
+  const [rawPost, setRawPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const { t } = useLanguage();
+  const post = useLocalizedBlogPost(rawPost);
 
   useEffect(() => {
     setLoading(true);
@@ -17,7 +19,7 @@ export default function BlogPost() {
         if (!r.ok) throw new Error('Not found');
         return r.json();
       })
-      .then(data => { setPost(data); setLoading(false); })
+      .then(data => { setRawPost(data); setLoading(false); })
       .catch(() => { setNotFound(true); setLoading(false); });
   }, [slug]);
 

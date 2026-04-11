@@ -147,6 +147,36 @@ export function initDb() {
   if (!pageCols.includes('title')) {
     db.exec('ALTER TABLE page_content ADD COLUMN title TEXT');
   }
+  if (!pageCols.includes('content_ar')) {
+    db.exec("ALTER TABLE page_content ADD COLUMN content_ar TEXT NOT NULL DEFAULT '{}'");
+  }
+
+  // ---- Migration: add Arabic columns to products ----
+  const prodCols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
+  if (!prodCols.includes('name_ar')) {
+    db.exec("ALTER TABLE products ADD COLUMN name_ar TEXT NOT NULL DEFAULT ''");
+    db.exec("ALTER TABLE products ADD COLUMN description_ar TEXT NOT NULL DEFAULT ''");
+    db.exec("ALTER TABLE products ADD COLUMN features_ar TEXT NOT NULL DEFAULT '[]'");
+    db.exec("ALTER TABLE products ADD COLUMN branding_options_ar TEXT NOT NULL DEFAULT '[]'");
+    db.exec("ALTER TABLE products ADD COLUMN notes_ar TEXT NOT NULL DEFAULT ''");
+    db.exec("ALTER TABLE products ADD COLUMN price_range_ar TEXT NOT NULL DEFAULT ''");
+    db.exec("ALTER TABLE products ADD COLUMN lead_time_ar TEXT NOT NULL DEFAULT ''");
+  }
+
+  // ---- Migration: add Arabic columns to categories ----
+  const catCols = db.prepare("PRAGMA table_info(categories)").all().map(c => c.name);
+  if (!catCols.includes('name_ar')) {
+    db.exec("ALTER TABLE categories ADD COLUMN name_ar TEXT NOT NULL DEFAULT ''");
+    db.exec("ALTER TABLE categories ADD COLUMN description_ar TEXT NOT NULL DEFAULT ''");
+  }
+
+  // ---- Migration: add Arabic columns to blog_posts ----
+  const blogCols = db.prepare("PRAGMA table_info(blog_posts)").all().map(c => c.name);
+  if (!blogCols.includes('title_ar')) {
+    db.exec("ALTER TABLE blog_posts ADD COLUMN title_ar TEXT NOT NULL DEFAULT ''");
+    db.exec("ALTER TABLE blog_posts ADD COLUMN excerpt_ar TEXT NOT NULL DEFAULT ''");
+    db.exec("ALTER TABLE blog_posts ADD COLUMN content_ar TEXT NOT NULL DEFAULT ''");
+  }
 
   // ---- Seed default roles ----
   const roleCount = db.prepare('SELECT COUNT(*) as count FROM roles').get();

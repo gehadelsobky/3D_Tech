@@ -25,19 +25,26 @@ function downloadCSV(endpoint, filename) {
 
 const emptyProduct = {
   name: '',
+  nameAr: '',
   category: 'usb',
   images: [''],
   description: '',
+  descriptionAr: '',
   features: [''],
+  featuresAr: [''],
   brandingOptions: [''],
+  brandingOptionsAr: [''],
   moq: 50,
   leadTime: '7-10 business days',
+  leadTimeAr: '',
   priceRange: '',
+  priceRangeAr: '',
   priceMin: '',
   priceMax: '',
   leadDays: '',
   tags: [],
   notes: '',
+  notesAr: '',
 };
 
 // Build a reverse map: tag → list of gift types that use it
@@ -236,15 +243,24 @@ export default function Admin() {
     }
   }, [hasPermission]);
 
+  const [pageFormAr, setPageFormAr] = useState(null);
+  const [showPageAr, setShowPageAr] = useState(false);
+
   const startEditPage = (slug) => {
     setEditingPage(slug);
-    setPageForm(JSON.parse(JSON.stringify(allPages[slug] || {})));
+    const pageData = JSON.parse(JSON.stringify(allPages[slug] || {}));
+    const { _ar, ...enContent } = pageData;
+    setPageForm(enContent);
+    setPageFormAr(_ar || {});
+    setShowPageAr(false);
     setPageError('');
   };
 
   const cancelPage = () => {
     setEditingPage(null);
     setPageForm(null);
+    setPageFormAr(null);
+    setShowPageAr(false);
     setPageError('');
   };
 
@@ -280,7 +296,8 @@ export default function Admin() {
     setPageError('');
     setPageSaving(true);
     try {
-      await updatePage(editingPage, pageForm);
+      const dataToSave = { ...pageForm, _ar: pageFormAr || {} };
+      await updatePage(editingPage, dataToSave);
       cancelPage();
     } catch (err) {
       setPageError(err.message || 'Failed to save page');
@@ -414,13 +431,13 @@ export default function Admin() {
 
   const startNewBlog = () => {
     setEditingBlog('new');
-    setBlogForm({ title: '', slug: '', excerpt: '', content: '', cover_image: '', author: 'Admin', status: 'draft', tags: [] });
+    setBlogForm({ title: '', title_ar: '', slug: '', excerpt: '', excerpt_ar: '', content: '', content_ar: '', cover_image: '', author: 'Admin', status: 'draft', tags: [] });
     setBlogError('');
   };
 
   const startEditBlog = (post) => {
     setEditingBlog(post);
-    setBlogForm({ title: post.title, slug: post.slug, excerpt: post.excerpt, content: post.content, cover_image: post.cover_image, author: post.author, status: post.status, tags: post.tags || [] });
+    setBlogForm({ title: post.title, title_ar: post.title_ar || '', slug: post.slug, excerpt: post.excerpt, excerpt_ar: post.excerpt_ar || '', content: post.content, content_ar: post.content_ar || '', cover_image: post.cover_image, author: post.author, status: post.status, tags: post.tags || [] });
     setBlogError('');
   };
 
@@ -718,13 +735,13 @@ export default function Admin() {
 
   const startNewCat = () => {
     setEditingCat('new');
-    setCatForm({ id: '', name: '', icon: '', description: '' });
+    setCatForm({ id: '', name: '', name_ar: '', icon: '', description: '', description_ar: '' });
     setCatError('');
   };
 
   const startEditCat = (cat) => {
     setEditingCat(cat);
-    setCatForm({ id: cat.id, name: cat.name, icon: cat.icon, description: cat.description, is_active: cat.is_active });
+    setCatForm({ id: cat.id, name: cat.name, name_ar: cat.name_ar || '', icon: cat.icon, description: cat.description, description_ar: cat.description_ar || '', is_active: cat.is_active });
     setCatError('');
   };
 
@@ -1475,6 +1492,62 @@ export default function Admin() {
                   ))}
                   {/* Smart Tag Picker */}
                   <TagPicker form={form} setForm={setForm} settings={settings} inputClass={inputClass} />
+
+                  {/* Arabic Content Section */}
+                  <details className="border border-amber-200 rounded-lg bg-amber-50/50">
+                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-amber-800 select-none">
+                      🌐 المحتوى العربي (Arabic Content)
+                    </summary>
+                    <div className="p-4 space-y-4 border-t border-amber-200" dir="rtl">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">اسم المنتج</label>
+                          <input type="text" value={form.nameAr || ''} onChange={(e) => handleChange('nameAr', e.target.value)} className={'w-full ' + inputClass} placeholder="اسم المنتج بالعربي" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">نطاق السعر</label>
+                          <input type="text" value={form.priceRangeAr || ''} onChange={(e) => handleChange('priceRangeAr', e.target.value)} className={'w-full ' + inputClass} placeholder="مثال: 290 - 350 جنيه للقطعة" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">الوصف</label>
+                        <textarea value={form.descriptionAr || ''} onChange={(e) => handleChange('descriptionAr', e.target.value)} rows={3} className={'w-full resize-none ' + inputClass} placeholder="وصف المنتج بالعربي" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">مدة التسليم</label>
+                          <input type="text" value={form.leadTimeAr || ''} onChange={(e) => handleChange('leadTimeAr', e.target.value)} className={'w-full ' + inputClass} placeholder="مثال: 7-10 أيام عمل" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">ملاحظات</label>
+                          <input type="text" value={form.notesAr || ''} onChange={(e) => handleChange('notesAr', e.target.value)} className={'w-full ' + inputClass} placeholder="ملاحظات بالعربي" />
+                        </div>
+                      </div>
+                      {/* Arabic Features */}
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">المميزات</label>
+                        {(form.featuresAr || ['']).map((val, i) => (
+                          <div key={i} className="flex gap-2 mb-2">
+                            <input type="text" value={val} onChange={(e) => handleArrayChange('featuresAr', i, e.target.value)} className={'flex-1 ' + inputClass} placeholder="ميزة بالعربي" />
+                            {(form.featuresAr || ['']).length > 1 && <button onClick={() => removeArrayItem('featuresAr', i)} className={btnDanger}>&times;</button>}
+                          </div>
+                        ))}
+                        <button onClick={() => addArrayItem('featuresAr')} className={addBtn}>+ إضافة ميزة</button>
+                      </div>
+                      {/* Arabic Branding Options */}
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">خيارات العلامة التجارية</label>
+                        {(form.brandingOptionsAr || ['']).map((val, i) => (
+                          <div key={i} className="flex gap-2 mb-2">
+                            <input type="text" value={val} onChange={(e) => handleArrayChange('brandingOptionsAr', i, e.target.value)} className={'flex-1 ' + inputClass} placeholder="خيار بالعربي" />
+                            {(form.brandingOptionsAr || ['']).length > 1 && <button onClick={() => removeArrayItem('brandingOptionsAr', i)} className={btnDanger}>&times;</button>}
+                          </div>
+                        ))}
+                        <button onClick={() => addArrayItem('brandingOptionsAr')} className={addBtn}>+ إضافة خيار</button>
+                      </div>
+                    </div>
+                  </details>
+
                   <div className="flex gap-3 pt-2">
                     <button onClick={save} disabled={saving} className={btnPrimary}>
                       {saving ? 'Saving...' : editing === 'new' ? 'Add Product' : 'Save Changes'}
@@ -1994,6 +2067,17 @@ export default function Admin() {
                   </div>
                 </div>
 
+                {/* Language Toggle */}
+                <div className="flex gap-2">
+                  <button onClick={() => setShowPageAr(false)} className={`px-4 py-2 text-sm font-medium rounded-lg cursor-pointer border-none transition-colors ${!showPageAr ? 'bg-primary text-white' : 'bg-gray-100 text-text-muted hover:bg-gray-200'}`}>
+                    🇬🇧 English Content
+                  </button>
+                  <button onClick={() => setShowPageAr(true)} className={`px-4 py-2 text-sm font-medium rounded-lg cursor-pointer border-none transition-colors ${showPageAr ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}>
+                    🇸🇦 المحتوى العربي
+                  </button>
+                </div>
+
+                {!showPageAr ? (
                 <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
                   {Object.entries(pageForm).map(([key, value]) => {
                     // String fields
@@ -2055,6 +2139,80 @@ export default function Admin() {
                     return null;
                   })}
                 </div>
+                ) : (
+                <div className="bg-white rounded-xl border border-amber-200 p-6 space-y-4" dir="rtl">
+                  <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
+                    ✏️ أدخل النسخة العربية لكل حقل. الحقول الفارغة ستعرض المحتوى الإنجليزي كبديل.
+                  </p>
+                  {Object.entries(pageForm).map(([key, value]) => {
+                    const arValue = pageFormAr?.[key];
+                    // String fields
+                    if (typeof value === 'string') {
+                      const isLong = value.length > 100;
+                      return (
+                        <div key={key}>
+                          <label className="block text-xs font-medium text-text-muted mb-1">{key} <span className="text-[10px] text-gray-400 font-normal">({typeof value === 'string' && value ? value.slice(0, 40) + '...' : 'فارغ'})</span></label>
+                          {isLong ? (
+                            <textarea value={arValue || ''} onChange={(e) => setPageFormAr(prev => ({ ...prev, [key]: e.target.value }))} rows={3} className={'w-full ' + inputClass + ' resize-none'} placeholder={`الترجمة العربية لـ ${key}`} />
+                          ) : (
+                            <input type="text" value={arValue || ''} onChange={(e) => setPageFormAr(prev => ({ ...prev, [key]: e.target.value }))} className={'w-full ' + inputClass} placeholder={`الترجمة العربية لـ ${key}`} />
+                          )}
+                        </div>
+                      );
+                    }
+                    // Array of strings
+                    if (Array.isArray(value) && value.length >= 0 && (value.length === 0 || typeof value[0] === 'string')) {
+                      const arArr = arValue || value.map(() => '');
+                      return (
+                        <div key={key}>
+                          <label className="block text-xs font-medium text-text-muted mb-2">{key}</label>
+                          {value.map((item, i) => (
+                            <div key={i} className="flex gap-2 mb-2 items-center">
+                              <span className="text-[10px] text-gray-400 shrink-0 max-w-32 truncate" title={item}>{item || '—'}</span>
+                              <input type="text" value={arArr[i] || ''} onChange={(e) => {
+                                setPageFormAr(prev => {
+                                  const arr = [...(prev?.[key] || value.map(() => ''))];
+                                  arr[i] = e.target.value;
+                                  return { ...prev, [key]: arr };
+                                });
+                              }} className={'flex-1 ' + inputClass} placeholder="الترجمة العربية" />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    // Array of objects
+                    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+                      const fields = Object.keys(value[0]);
+                      const arArr = arValue || value.map(() => Object.fromEntries(fields.map(f => [f, ''])));
+                      return (
+                        <div key={key}>
+                          <label className="block text-xs font-medium text-text-muted mb-2">{key}</label>
+                          {value.map((item, i) => (
+                            <div key={i} className="mb-2 p-3 bg-surface rounded-lg">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {fields.map((f) => (
+                                  <div key={f}>
+                                    <label className="block text-[10px] text-text-muted mb-0.5">{f} <span className="text-gray-400">({(item[f] || '').slice(0, 25)}...)</span></label>
+                                    <input type="text" value={arArr[i]?.[f] || ''} onChange={(e) => {
+                                      setPageFormAr(prev => {
+                                        const arr = [...(prev?.[key] || value.map(() => Object.fromEntries(fields.map(ff => [ff, '']))))];
+                                        arr[i] = { ...(arr[i] || {}), [f]: e.target.value };
+                                        return { ...prev, [key]: arr };
+                                      });
+                                    }} className={'w-full ' + inputClass + ' text-xs'} placeholder="بالعربي" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -2192,6 +2350,20 @@ export default function Admin() {
                     <label className="block text-xs font-medium text-text-muted mb-1">Description</label>
                     <input type="text" value={catForm.description} onChange={(e) => setCatForm(prev => ({ ...prev, description: e.target.value }))} className={'w-full ' + inputClass} placeholder="Brief description of this category" />
                   </div>
+                  {/* Arabic fields for category */}
+                  <details className="border border-amber-200 rounded-lg bg-amber-50/50 mt-3">
+                    <summary className="px-4 py-2 cursor-pointer font-semibold text-xs text-amber-800 select-none">🌐 المحتوى العربي (Arabic Content)</summary>
+                    <div className="p-4 space-y-3 border-t border-amber-200" dir="rtl">
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">اسم الفئة</label>
+                        <input type="text" value={catForm.name_ar || ''} onChange={(e) => setCatForm(prev => ({ ...prev, name_ar: e.target.value }))} className={'w-full ' + inputClass} placeholder="اسم الفئة بالعربي" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">الوصف</label>
+                        <input type="text" value={catForm.description_ar || ''} onChange={(e) => setCatForm(prev => ({ ...prev, description_ar: e.target.value }))} className={'w-full ' + inputClass} placeholder="وصف الفئة بالعربي" />
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
             ) : (
@@ -2554,6 +2726,24 @@ export default function Admin() {
                     <label className="block text-xs font-medium text-text-muted mb-1">Tags (comma separated)</label>
                     <input type="text" value={(blogForm.tags || []).join(', ')} onChange={(e) => setBlogForm(prev => ({ ...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))} className={'w-full ' + inputClass} placeholder="3d-printing, corporate-gifts" />
                   </div>
+                  {/* Arabic Blog Content */}
+                  <details className="border border-amber-200 rounded-lg bg-amber-50/50">
+                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-amber-800 select-none">🌐 المحتوى العربي (Arabic Content)</summary>
+                    <div className="p-4 space-y-4 border-t border-amber-200" dir="rtl">
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">عنوان المقال</label>
+                        <input type="text" value={blogForm.title_ar || ''} onChange={(e) => setBlogForm(prev => ({ ...prev, title_ar: e.target.value }))} className={'w-full ' + inputClass} placeholder="عنوان المقال بالعربي" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">الملخص</label>
+                        <textarea value={blogForm.excerpt_ar || ''} onChange={(e) => setBlogForm(prev => ({ ...prev, excerpt_ar: e.target.value }))} rows={2} className={'w-full resize-none ' + inputClass} placeholder="ملخص قصير بالعربي" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">المحتوى (HTML)</label>
+                        <textarea value={blogForm.content_ar || ''} onChange={(e) => setBlogForm(prev => ({ ...prev, content_ar: e.target.value }))} rows={12} className={'w-full resize-y font-mono text-sm ' + inputClass} placeholder="محتوى المقال بالعربي..." />
+                      </div>
+                    </div>
+                  </details>
                 </div>
                 <div className="flex gap-3 mt-4">
                   <button onClick={saveBlog} disabled={blogSaving} className={btnPrimary}>{blogSaving ? 'Saving...' : 'Save Post'}</button>

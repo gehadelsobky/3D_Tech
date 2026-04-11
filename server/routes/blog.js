@@ -31,7 +31,7 @@ router.get('/:slug', (req, res) => {
 
 // POST /api/blog — create a new post
 router.post('/', authenticate, requirePermission('pages.edit'), (req, res) => {
-  const { title, slug: rawSlug, excerpt, content, cover_image, author, status, tags } = req.body;
+  const { title, title_ar, slug: rawSlug, excerpt, excerpt_ar, content, content_ar, cover_image, author, status, tags } = req.body;
   if (!title || !rawSlug) return res.status(400).json({ error: 'Title and slug are required' });
 
   const slug = rawSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -41,8 +41,8 @@ router.post('/', authenticate, requirePermission('pages.edit'), (req, res) => {
   if (existing) return res.status(409).json({ error: 'A post with this slug already exists' });
 
   const result = db.prepare(
-    "INSERT INTO blog_posts (title, slug, excerpt, content, cover_image, author, status, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  ).run(title, slug, excerpt || '', content || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []));
+    "INSERT INTO blog_posts (title, title_ar, slug, excerpt, excerpt_ar, content, content_ar, cover_image, author, status, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(title, title_ar || '', slug, excerpt || '', excerpt_ar || '', content || '', content_ar || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []));
 
   const created = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json({ ...created, tags: JSON.parse(created.tags) });
@@ -51,15 +51,15 @@ router.post('/', authenticate, requirePermission('pages.edit'), (req, res) => {
 // PUT /api/blog/:id — update a post
 router.put('/:id', authenticate, requirePermission('pages.edit'), (req, res) => {
   const { id } = req.params;
-  const { title, excerpt, content, cover_image, author, status, tags } = req.body;
+  const { title, title_ar, excerpt, excerpt_ar, content, content_ar, cover_image, author, status, tags } = req.body;
 
   const existing = db.prepare('SELECT id FROM blog_posts WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Post not found' });
 
   db.prepare(`
-    UPDATE blog_posts SET title = ?, excerpt = ?, content = ?, cover_image = ?, author = ?, status = ?, tags = ?, updated_at = datetime('now')
+    UPDATE blog_posts SET title = ?, title_ar = ?, excerpt = ?, excerpt_ar = ?, content = ?, content_ar = ?, cover_image = ?, author = ?, status = ?, tags = ?, updated_at = datetime('now')
     WHERE id = ?
-  `).run(title, excerpt || '', content || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []), id);
+  `).run(title, title_ar || '', excerpt || '', excerpt_ar || '', content || '', content_ar || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []), id);
 
   const updated = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id);
   res.json({ ...updated, tags: JSON.parse(updated.tags) });

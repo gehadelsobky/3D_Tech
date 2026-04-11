@@ -30,7 +30,8 @@ router.post('/', authenticate, requirePermission('products.create'), (req, res) 
   const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM categories').get();
   const sortOrder = (maxOrder.max ?? -1) + 1;
 
-  db.prepare('INSERT INTO categories (id, name, icon, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(id, name, icon || '', description || '', sortOrder);
+  const { name_ar, description_ar } = req.body;
+  db.prepare('INSERT INTO categories (id, name, name_ar, icon, description, description_ar, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, name, name_ar || '', icon || '', description || '', description_ar || '', sortOrder);
 
   const created = db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
   res.status(201).json(created);
@@ -39,13 +40,13 @@ router.post('/', authenticate, requirePermission('products.create'), (req, res) 
 // PUT /api/categories/:id — update a category
 router.put('/:id', authenticate, requirePermission('products.edit'), (req, res) => {
   const { id } = req.params;
-  const { name, icon, description, is_active } = req.body;
+  const { name, name_ar, icon, description, description_ar, is_active } = req.body;
 
   const existing = db.prepare('SELECT id FROM categories WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Category not found' });
 
-  db.prepare('UPDATE categories SET name = ?, icon = ?, description = ?, is_active = ? WHERE id = ?').run(
-    name, icon || '', description || '', is_active ?? 1, id
+  db.prepare('UPDATE categories SET name = ?, name_ar = ?, icon = ?, description = ?, description_ar = ?, is_active = ? WHERE id = ?').run(
+    name, name_ar || '', icon || '', description || '', description_ar || '', is_active ?? 1, id
   );
 
   const updated = db.prepare('SELECT * FROM categories WHERE id = ?').get(id);

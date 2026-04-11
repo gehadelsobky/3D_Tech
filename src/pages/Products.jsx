@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
+import { useLocalizedProducts, useLocalizedCategories } from '../hooks/useLocalized';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
@@ -16,9 +17,11 @@ function useDebounce(value, delay) {
 }
 
 export default function Products() {
-  const { products, loading } = useProducts();
+  const { products: rawProducts, loading } = useProducts();
   const { content: c } = usePageContent('products');
-  const { categories } = useCategories();
+  const { categories: rawCategories } = useCategories();
+  const products = useLocalizedProducts(rawProducts);
+  const categories = useLocalizedCategories(rawCategories);
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);

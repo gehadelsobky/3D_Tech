@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
+import { useLocalizedProducts } from '../hooks/useLocalized';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const { products, loading } = useProducts();
+  const { products: rawProducts, loading } = useProducts();
+  const products = useLocalizedProducts(rawProducts);
   const product = products.find((p) => p.id === Number(id));
   const [activeImage, setActiveImage] = useState(0);
 

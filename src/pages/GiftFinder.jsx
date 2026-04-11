@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useGiftSettings } from '../context/GiftSettingsContext';
 import { useCategories } from '../context/CategoryContext';
+import { useLocalizedProducts } from '../hooks/useLocalized';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
@@ -87,7 +88,8 @@ function getRecommendations(answers, products, settings) {
 }
 
 export default function GiftFinder() {
-  const { products, loading: productsLoading } = useProducts();
+  const { products: rawProducts, loading: productsLoading } = useProducts();
+  const products = useLocalizedProducts(rawProducts);
   const { settings, loading: settingsLoading } = useGiftSettings();
   const { categories } = useCategories();
   const [step, setStep] = useState(0);

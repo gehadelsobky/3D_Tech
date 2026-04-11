@@ -18,12 +18,11 @@ router.get('/', (_req, res) => {
 
 // GET /api/pages/:slug — get page content (hidden pages only visible to authenticated users)
 router.get('/:slug', (req, res) => {
-  const row = db.prepare('SELECT content, hidden FROM page_content WHERE slug = ?').get(req.params.slug);
+  const row = db.prepare('SELECT content, content_ar, hidden FROM page_content WHERE slug = ?').get(req.params.slug);
   if (!row) {
     return res.status(404).json({ error: 'Page not found' });
   }
   if (row.hidden) {
-    // Allow authenticated users (admins) to view hidden page content
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(404).json({ error: 'Page not found' });
     try {
@@ -32,7 +31,9 @@ router.get('/:slug', (req, res) => {
       return res.status(404).json({ error: 'Page not found' });
     }
   }
-  res.json(JSON.parse(row.content));
+  const content = JSON.parse(row.content);
+  const contentAr = JSON.parse(row.content_ar || '{}');
+  res.json({ ...content, _ar: contentAr });
 });
 
 // POST /api/pages — create a new custom page
@@ -103,9 +104,9 @@ router.delete('/:slug', authenticate, requirePermission('pages.edit'), (req, res
 // PUT /api/pages/:slug — update page content (requires pages.edit)
 router.put('/:slug', authenticate, requirePermission('pages.edit'), (req, res) => {
   const { slug } = req.params;
-  const content = req.body;
+  const body = req.body;
 
-  if (!content || typeof content !== 'object') {
+  if (!body || typeof body !== 'object') {
     return res.status(400).json({ error: 'Invalid content data' });
   }
 
@@ -114,8 +115,18 @@ router.put('/:slug', authenticate, requirePermission('pages.edit'), (req, res) =
     return res.status(404).json({ error: 'Page not found' });
   }
 
-  db.prepare("UPDATE page_content SET content = ?, updated_at = datetime('now') WHERE slug = ?").run(JSON.stringify(content), slug);
-  res.json(content);
+  // Separate Arabic content from English content
+  const { _ar, ...content } = body;
+
+  if (_ar && typeof _ar === 'object') {
+    db.prepare("UPDATE page_content SET content = ?, content_ar = ?, updated_at = datetime('now') WHERE slug = ?")
+      .run(JSON.stringify(content), JSON.stringify(_ar), slug);
+  } else {
+    db.prepare("UPDATE page_content SET content = ?, updated_at = datetime('now') WHERE slug = ?")
+      .run(JSON.stringify(content), slug);
+  }
+
+  res.json({ ...content, _ar: _ar || {} });
 });
 
 export default router;

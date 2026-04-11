@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { useLocalizedBlogPosts } from '../hooks/useLocalized';
 import SEO from '../components/SEO';
 
 export default function Blog() {
-  const [posts, setPosts] = useState([]);
+  const [rawPosts, setRawPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
+  const posts = useLocalizedBlogPosts(rawPosts);
 
   useEffect(() => {
     fetch('/api/blog')
       .then(r => r.json())
-      .then(data => { setPosts(data); setLoading(false); })
+      .then(data => { setRawPosts(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
