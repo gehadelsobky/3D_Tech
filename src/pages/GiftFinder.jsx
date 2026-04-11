@@ -3,17 +3,10 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useGiftSettings } from '../context/GiftSettingsContext';
 import { useCategories } from '../context/CategoryContext';
-import { useLocalizedProducts } from '../hooks/useLocalized';
+import { useLocalizedProducts, useLocalizedCategories } from '../hooks/useLocalized';
+import { useLanguage } from '../context/LanguageContext';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
-
-const steps = [
-  { key: 'occasion', label: 'Purpose', question: 'What is the purpose?' },
-  { key: 'budget', label: 'Budget', question: 'What is your budget per unit?' },
-  { key: 'audience', label: 'Audience', question: 'Who is your target audience?' },
-  { key: 'quantity', label: 'Quantity', question: 'How many units do you need?' },
-  { key: 'delivery', label: 'Timeline', question: 'When do you need them?' },
-];
 
 function parseQuantityMax(quantity) {
   // Parse "50 - 100 units" → 100, "500+ units" → 999999, fallback 999999
@@ -91,12 +84,22 @@ export default function GiftFinder() {
   const { products: rawProducts, loading: productsLoading } = useProducts();
   const products = useLocalizedProducts(rawProducts);
   const { settings, loading: settingsLoading } = useGiftSettings();
-  const { categories } = useCategories();
+  const { categories: rawCategories } = useCategories();
+  const categories = useLocalizedCategories(rawCategories);
+  const { t } = useLanguage();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
 
   const loading = productsLoading || settingsLoading;
+
+  const steps = useMemo(() => [
+    { key: 'occasion', label: t('giftFinder.purpose'), question: t('giftFinder.qPurpose') },
+    { key: 'budget', label: t('giftFinder.budget'), question: t('giftFinder.qBudget') },
+    { key: 'audience', label: t('giftFinder.audience'), question: t('giftFinder.qAudience') },
+    { key: 'quantity', label: t('giftFinder.quantity'), question: t('giftFinder.qQuantity') },
+    { key: 'delivery', label: t('giftFinder.timeline'), question: t('giftFinder.qTimeline') },
+  ], [t]);
 
   // Build step options from settings
   const stepOptions = useMemo(() => {
@@ -150,8 +153,8 @@ export default function GiftFinder() {
       />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-text mb-3">Gift Finder</h1>
-          <p className="text-text-muted">Answer a few questions and we'll recommend the best products for your needs.</p>
+          <h1 className="text-3xl font-bold text-text mb-3">{t('giftFinder.title')}</h1>
+          <p className="text-text-muted">{t('giftFinder.subtitle')}</p>
         </div>
 
         {!showResults ? (
@@ -169,7 +172,7 @@ export default function GiftFinder() {
             </div>
 
             <div className="text-sm text-text-muted mb-2">
-              Step {step + 1} of {steps.length}
+              {t('giftFinder.stepOf').replace('{current}', step + 1).replace('{total}', steps.length)}
             </div>
             <h2 className="text-xl font-semibold text-text mb-6">
               {currentStep.question}
@@ -180,9 +183,9 @@ export default function GiftFinder() {
                 <button
                   key={option}
                   onClick={() => selectOption(option)}
-                  className="px-4 py-3 bg-surface border border-gray-200 rounded-lg text-sm font-medium text-text hover:border-primary hover:bg-red-50 transition-colors cursor-pointer text-left"
+                  className="px-4 py-3 bg-surface border border-gray-200 rounded-lg text-sm font-medium text-text hover:border-primary hover:bg-red-50 transition-colors cursor-pointer text-start"
                 >
-                  {option}
+                  {t(`giftFinder.options.${option}`) !== `giftFinder.options.${option}` ? t(`giftFinder.options.${option}`) : option}
                 </button>
               ))}
             </div>
@@ -192,7 +195,7 @@ export default function GiftFinder() {
                 onClick={() => setStep(step - 1)}
                 className="mt-6 text-sm text-text-muted hover:text-text cursor-pointer bg-transparent border-none"
               >
-                &larr; Back
+                &larr; {t('giftFinder.back')}
               </button>
             )}
           </div>
@@ -200,21 +203,25 @@ export default function GiftFinder() {
           <div>
             {/* Summary */}
             <div className="bg-white rounded-xl border border-gray-100 p-6 mb-8">
-              <h3 className="font-semibold text-text mb-4">Your Selections</h3>
+              <h3 className="font-semibold text-text mb-4">{t('giftFinder.yourSelections')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {steps.map((s) => (
-                  <div key={s.key}>
-                    <div className="text-xs text-text-muted mb-1">{s.label}</div>
-                    <div className="text-sm font-medium text-text">{answers[s.key]}</div>
-                  </div>
-                ))}
+                {steps.map((s) => {
+                  const val = answers[s.key];
+                  const translatedVal = t(`giftFinder.options.${val}`);
+                  return (
+                    <div key={s.key}>
+                      <div className="text-xs text-text-muted mb-1">{s.label}</div>
+                      <div className="text-sm font-medium text-text">{translatedVal !== `giftFinder.options.${val}` ? translatedVal : val}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Recommended Categories */}
             {recommendedCategories.length > 0 && (
               <div className="mb-6">
-                <h3 className="font-semibold text-text mb-3">Recommended Categories</h3>
+                <h3 className="font-semibold text-text mb-3">{t('giftFinder.recommendedCategories')}</h3>
                 <div className="flex flex-wrap gap-2">
                   {recommendedCategories.map((cat) => (
                     <Link
@@ -230,7 +237,7 @@ export default function GiftFinder() {
             )}
 
             {/* Recommended Products */}
-            <h3 className="font-semibold text-text mb-4">Recommended Products</h3>
+            <h3 className="font-semibold text-text mb-4">{t('giftFinder.resultsTitle')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
               {recommended.map((product) => (
                 <ProductCard key={product.id} product={product} matchInfo={product._matchInfo} />
@@ -242,13 +249,13 @@ export default function GiftFinder() {
                 onClick={reset}
                 className="px-6 py-2.5 bg-white border border-gray-200 text-text-muted font-medium rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
               >
-                Start Over
+                {t('giftFinder.startOver')}
               </button>
               <Link
                 to={`/contact?giftType=${encodeURIComponent(answers.occasion || '')}`}
                 className="px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors no-underline text-center"
               >
-                Request a Quote
+                {t('giftFinder.requestQuote')}
               </Link>
             </div>
           </div>

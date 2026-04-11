@@ -2,11 +2,13 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
+import { useLocalizedCategories } from '../hooks/useLocalized';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Footer() {
   const { global: g, pagesMeta } = usePageContent();
-  const { categories } = useCategories();
+  const { categories: rawCategories } = useCategories();
+  const categories = useLocalizedCategories(rawCategories);
   const { t } = useLanguage();
   const hiddenSlugs = useMemo(() => new Set((pagesMeta || []).filter(p => p.hidden).map(p => p.slug)), [pagesMeta]);
   const customPages = (pagesMeta || []).filter((p) => p.is_custom && !p.hidden);
