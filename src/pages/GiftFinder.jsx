@@ -86,12 +86,18 @@ export default function GiftFinder() {
   const { settings, loading: settingsLoading } = useGiftSettings();
   const { categories: rawCategories } = useCategories();
   const categories = useLocalizedCategories(rawCategories);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
 
   const loading = productsLoading || settingsLoading;
+
+  // Translate gift setting option using settings.translations_ar (admin-editable)
+  const trOption = (option) => {
+    if (lang !== 'ar' || !settings?.translations_ar) return option;
+    return settings.translations_ar[option] || option;
+  };
 
   const steps = useMemo(() => [
     { key: 'occasion', label: t('giftFinder.purpose'), question: t('giftFinder.qPurpose') },
@@ -185,7 +191,7 @@ export default function GiftFinder() {
                   onClick={() => selectOption(option)}
                   className="px-4 py-3 bg-surface border border-gray-200 rounded-lg text-sm font-medium text-text hover:border-primary hover:bg-red-50 transition-colors cursor-pointer text-start"
                 >
-                  {t(`giftFinder.options.${option}`) !== `giftFinder.options.${option}` ? t(`giftFinder.options.${option}`) : option}
+                  {trOption(option)}
                 </button>
               ))}
             </div>
@@ -207,11 +213,10 @@ export default function GiftFinder() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {steps.map((s) => {
                   const val = answers[s.key];
-                  const translatedVal = t(`giftFinder.options.${val}`);
                   return (
                     <div key={s.key}>
                       <div className="text-xs text-text-muted mb-1">{s.label}</div>
-                      <div className="text-sm font-medium text-text">{translatedVal !== `giftFinder.options.${val}` ? translatedVal : val}</div>
+                      <div className="text-sm font-medium text-text">{trOption(val)}</div>
                     </div>
                   );
                 })}

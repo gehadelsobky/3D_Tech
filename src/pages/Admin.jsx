@@ -916,7 +916,16 @@ export default function Admin() {
 
   // ---- Gift Settings Tab Handlers ----
   const startEditSettings = () => {
-    setSettingsForm(JSON.parse(JSON.stringify(settings)));
+    const copy = JSON.parse(JSON.stringify(settings));
+    if (!copy.translations_ar) copy.translations_ar = {};
+    setSettingsForm(copy);
+  };
+
+  const updateTranslationAr = (englishKey, arValue) => {
+    setSettingsForm((prev) => ({
+      ...prev,
+      translations_ar: { ...prev.translations_ar, [englishKey]: arValue },
+    }));
   };
 
   const cancelSettings = () => {
@@ -1691,11 +1700,22 @@ export default function Admin() {
                                   map[e.target.value] = map[oldName];
                                   delete map[oldName];
                                 }
-                                return { ...prev, giftTagMap: map };
+                                const tr = { ...prev.translations_ar };
+                                if (tr[oldName] !== undefined) {
+                                  tr[e.target.value] = tr[oldName];
+                                  delete tr[oldName];
+                                }
+                                return { ...prev, giftTagMap: map, translations_ar: tr };
                               });
                             }
                           }}
-                          className={'flex-1 ' + inputClass} placeholder="Gift type name"
+                          className={'flex-1 ' + inputClass} placeholder="Gift type name (English)"
+                        />
+                        <input
+                          type="text" dir="rtl"
+                          value={settingsForm.translations_ar?.[occ] || ''}
+                          onChange={(e) => updateTranslationAr(occ, e.target.value)}
+                          className={'flex-1 ' + inputClass} placeholder="اسم النوع (عربي)"
                         />
                         {settingsForm.giftTypes.length > 1 && (
                           <button onClick={() => {
@@ -1745,11 +1765,22 @@ export default function Admin() {
                                   map[e.target.value] = map[oldName];
                                   delete map[oldName];
                                 }
-                                return { ...prev, audienceCategoryMap: map };
+                                const tr = { ...prev.translations_ar };
+                                if (tr[oldName] !== undefined) {
+                                  tr[e.target.value] = tr[oldName];
+                                  delete tr[oldName];
+                                }
+                                return { ...prev, audienceCategoryMap: map, translations_ar: tr };
                               });
                             }
                           }}
-                          className={'flex-1 ' + inputClass} placeholder="Audience type"
+                          className={'flex-1 ' + inputClass} placeholder="Audience type (English)"
+                        />
+                        <input
+                          type="text" dir="rtl"
+                          value={settingsForm.translations_ar?.[aud] || ''}
+                          onChange={(e) => updateTranslationAr(aud, e.target.value)}
+                          className={'flex-1 ' + inputClass} placeholder="نوع الجمهور (عربي)"
                         />
                         {settingsForm.audienceTypes.length > 1 && (
                           <button onClick={() => {
@@ -1788,8 +1819,19 @@ export default function Admin() {
                 <div className="bg-white rounded-xl border border-gray-100 p-6">
                   <h3 className="font-semibold text-text mb-4">Budget Ranges</h3>
                   {settingsForm.budgetRanges.map((b, i) => (
-                    <div key={i} className="flex gap-2 mb-2 items-center">
-                      <input type="text" value={b.label} onChange={(e) => updateObjectList('budgetRanges', i, 'label', e.target.value)} className={'flex-1 ' + inputClass} placeholder="Label" />
+                    <div key={i} className="flex flex-wrap gap-2 mb-2 items-center">
+                      <input type="text" value={b.label} onChange={(e) => {
+                        const oldLabel = settingsForm.budgetRanges[i].label;
+                        updateObjectList('budgetRanges', i, 'label', e.target.value);
+                        if (oldLabel !== e.target.value) {
+                          setSettingsForm((prev) => {
+                            const tr = { ...prev.translations_ar };
+                            if (tr[oldLabel] !== undefined) { tr[e.target.value] = tr[oldLabel]; delete tr[oldLabel]; }
+                            return { ...prev, translations_ar: tr };
+                          });
+                        }
+                      }} className={'flex-1 min-w-[140px] ' + inputClass} placeholder="Label (English)" />
+                      <input type="text" dir="rtl" value={settingsForm.translations_ar?.[b.label] || ''} onChange={(e) => updateTranslationAr(b.label, e.target.value)} className={'flex-1 min-w-[140px] ' + inputClass} placeholder="التسمية (عربي)" />
                       <input type="number" value={b.min} onChange={(e) => updateObjectList('budgetRanges', i, 'min', Number(e.target.value))} className={'w-24 ' + inputClass} placeholder="Min" />
                       <input type="number" value={b.max} onChange={(e) => updateObjectList('budgetRanges', i, 'max', Number(e.target.value))} className={'w-24 ' + inputClass} placeholder="Max" />
                       {settingsForm.budgetRanges.length > 1 && <button onClick={() => removeObjectListItem('budgetRanges', i)} className={btnDanger}>&times;</button>}
@@ -1803,7 +1845,18 @@ export default function Admin() {
                   <h3 className="font-semibold text-text mb-4">Quantity Ranges</h3>
                   {settingsForm.quantityRanges.map((q, i) => (
                     <div key={i} className="flex gap-2 mb-2">
-                      <input type="text" value={q} onChange={(e) => updateSimpleList('quantityRanges', i, e.target.value)} className={'flex-1 ' + inputClass} placeholder="e.g. 50 - 100 units" />
+                      <input type="text" value={q} onChange={(e) => {
+                        const oldVal = settingsForm.quantityRanges[i];
+                        updateSimpleList('quantityRanges', i, e.target.value);
+                        if (oldVal !== e.target.value) {
+                          setSettingsForm((prev) => {
+                            const tr = { ...prev.translations_ar };
+                            if (tr[oldVal] !== undefined) { tr[e.target.value] = tr[oldVal]; delete tr[oldVal]; }
+                            return { ...prev, translations_ar: tr };
+                          });
+                        }
+                      }} className={'flex-1 ' + inputClass} placeholder="e.g. 50 - 100 units" />
+                      <input type="text" dir="rtl" value={settingsForm.translations_ar?.[q] || ''} onChange={(e) => updateTranslationAr(q, e.target.value)} className={'flex-1 ' + inputClass} placeholder="مثال: 50 - 100 قطعة" />
                       {settingsForm.quantityRanges.length > 1 && <button onClick={() => removeSimpleListItem('quantityRanges', i)} className={btnDanger}>&times;</button>}
                     </div>
                   ))}
@@ -1814,8 +1867,19 @@ export default function Admin() {
                 <div className="bg-white rounded-xl border border-gray-100 p-6">
                   <h3 className="font-semibold text-text mb-4">Delivery Timeframes</h3>
                   {settingsForm.deliveryTimeframes.map((d, i) => (
-                    <div key={i} className="flex gap-2 mb-2 items-center">
-                      <input type="text" value={d.label} onChange={(e) => updateObjectList('deliveryTimeframes', i, 'label', e.target.value)} className={'flex-1 ' + inputClass} placeholder="Label" />
+                    <div key={i} className="flex flex-wrap gap-2 mb-2 items-center">
+                      <input type="text" value={d.label} onChange={(e) => {
+                        const oldLabel = settingsForm.deliveryTimeframes[i].label;
+                        updateObjectList('deliveryTimeframes', i, 'label', e.target.value);
+                        if (oldLabel !== e.target.value) {
+                          setSettingsForm((prev) => {
+                            const tr = { ...prev.translations_ar };
+                            if (tr[oldLabel] !== undefined) { tr[e.target.value] = tr[oldLabel]; delete tr[oldLabel]; }
+                            return { ...prev, translations_ar: tr };
+                          });
+                        }
+                      }} className={'flex-1 min-w-[120px] ' + inputClass} placeholder="Label (English)" />
+                      <input type="text" dir="rtl" value={settingsForm.translations_ar?.[d.label] || ''} onChange={(e) => updateTranslationAr(d.label, e.target.value)} className={'flex-1 min-w-[120px] ' + inputClass} placeholder="التسمية (عربي)" />
                       <input type="number" value={d.days} onChange={(e) => updateObjectList('deliveryTimeframes', i, 'days', Number(e.target.value))} className={'w-24 ' + inputClass} placeholder="Days" />
                       {settingsForm.deliveryTimeframes.length > 1 && <button onClick={() => removeObjectListItem('deliveryTimeframes', i)} className={btnDanger}>&times;</button>}
                     </div>
