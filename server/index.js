@@ -18,6 +18,7 @@ import categoryRoutes from './routes/categories.js';
 import uploadRoutes from './routes/upload.js';
 import blogRoutes from './routes/blog.js';
 import exportRoutes from './routes/export.js';
+import backupRoutes from './routes/backup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -101,6 +102,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Dashboard stats endpoint (admin)
 import { authenticate } from './middleware/auth.js';

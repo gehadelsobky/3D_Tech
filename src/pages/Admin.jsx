@@ -2892,6 +2892,30 @@ export default function Admin() {
                   </div>
                   <p className="text-[10px] text-text-muted">For Gmail, use an App Password (not your regular password). Enable 2FA first, then generate one at myaccount.google.com → Security → App passwords.</p>
                 </div>
+
+                {/* Database Backup */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                  <h3 className="font-semibold text-text mb-3">Database Backup</h3>
+                  <p className="text-sm text-text-muted mb-4">Download a full backup of the database. Backups are also created automatically on the server.</p>
+                  <button
+                    onClick={() => {
+                      const token = localStorage.getItem('auth_token');
+                      fetch('/api/backup', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+                        .then(r => { if (!r.ok) throw new Error('Backup failed'); return r.blob(); })
+                        .then(blob => {
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url; a.download = `backup_${new Date().toISOString().slice(0,10)}.db`;
+                          document.body.appendChild(a); a.click(); a.remove();
+                          URL.revokeObjectURL(url);
+                        })
+                        .catch(err => alert(err.message));
+                    }}
+                    className={btnPrimary}
+                  >
+                    Download Backup
+                  </button>
+                </div>
               </div>
             )}
           </>
