@@ -4,6 +4,7 @@ import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
 import { useLocalizedProducts, useLocalizedCategories } from '../hooks/useLocalized';
+import { useLanguage } from '../context/LanguageContext';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
@@ -22,6 +23,7 @@ export default function Products() {
   const { categories: rawCategories } = useCategories();
   const products = useLocalizedProducts(rawProducts);
   const categories = useLocalizedCategories(rawCategories);
+  const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);
@@ -100,7 +102,7 @@ export default function Products() {
                   : 'bg-white text-text-muted border-gray-200 hover:border-primary/30'
               }`}
             >
-              All
+              {t('products.allCategories')}
             </button>
             {categories.map((cat) => (
               <button
@@ -120,7 +122,7 @@ export default function Products() {
 
         {/* Results */}
         {loading ? (
-          <div className="text-center py-20 text-text-muted">Loading products...</div>
+          <div className="text-center py-20 text-text-muted">{t('common.loading')}</div>
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filtered.map((product) => (
@@ -130,13 +132,13 @@ export default function Products() {
         ) : (
           <div className="text-center py-20">
             <div className="text-4xl mb-3">🔍</div>
-            <h3 className="text-lg font-semibold text-text mb-1">{c.noResultsTitle || 'No products found'}</h3>
-            <p className="text-text-muted text-sm">{c.noResultsDescription || 'Try adjusting your search or filter criteria'}</p>
+            <h3 className="text-lg font-semibold text-text mb-1">{c.noResultsTitle || t('products.noResults')}</h3>
+            <p className="text-text-muted text-sm">{c.noResultsDescription || t('products.noResultsDescription')}</p>
           </div>
         )}
 
         <div className="mt-6 text-sm text-text-muted">
-          Showing {filtered.length} of {products.length} products
+          {t('products.showingOf').replace('{count}', filtered.length).replace('{total}', products.length)}
         </div>
       </div>
     </main>

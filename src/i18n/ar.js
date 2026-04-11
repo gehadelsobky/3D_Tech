@@ -32,6 +32,8 @@ export default {
     searchPlaceholder: 'ابحث عن منتج...',
     allCategories: 'الكل',
     noResults: 'لا توجد منتجات.',
+    noResultsDescription: 'جرّب تعديل معايير البحث أو التصفية',
+    showingOf: 'عرض {count} من {total} منتج',
     moq: 'الحد الأدنى للطلب',
     units: 'قطعة',
     relatedTitle: 'منتجات مشابهة',
@@ -76,24 +78,40 @@ export default {
     title: 'طلب عرض سعر',
     subtitle: 'املأ النموذج أدناه وسنعاود الاتصال بك خلال 24 ساعة.',
     name: 'الاسم الكامل',
+    namePlaceholder: 'أحمد محمد',
     company: 'اسم الشركة',
+    companyPlaceholder: 'اسم الشركة',
     email: 'البريد الإلكتروني',
+    emailPlaceholder: 'ahmed@example.com',
     phone: 'رقم الهاتف',
+    phonePlaceholder: '+20 10XXXXXXXX',
     giftType: 'نوع الهدية',
     selectGiftType: 'اختر نوع الهدية...',
     product: 'المنتج المطلوب',
     selectProduct: 'اختر منتج (اختياري)...',
     quantity: 'الكمية',
+    quantityPlaceholder: 'مثال: 100 قطعة',
     budget: 'نطاق الميزانية',
+    budgetPlaceholder: 'مثال: 5,000 - 10,000 جنيه',
     selectBudget: 'اختر نطاق الميزانية...',
     deliveryDate: 'تاريخ التسليم',
     message: 'ملاحظات إضافية',
+    messagePlaceholder: 'أخبرنا عن مشروعك واحتياجات العلامة التجارية أو أي متطلبات خاصة...',
     submit: 'إرسال الطلب',
     submitting: 'جارٍ الإرسال...',
     successTitle: 'شكراً لك!',
     successMessage: 'تم إرسال طلبك بنجاح. سنعاود الاتصال بك قريباً.',
     submitAnother: 'إرسال طلب آخر',
     contactInfo: 'معلومات الاتصال',
+    requestingFor: 'طلب عرض سعر لـ:',
+    emailLabel: 'البريد الإلكتروني',
+    phoneLabel: 'الهاتف',
+    locationLabel: 'الموقع',
+    whyUs: 'لماذا {company}؟',
+    errNameRequired: 'الاسم مطلوب',
+    errEmailRequired: 'البريد الإلكتروني مطلوب',
+    errEmailInvalid: 'صيغة البريد الإلكتروني غير صحيحة',
+    errPhoneRequired: 'رقم الهاتف مطلوب',
   },
 
   // Gift Finder
@@ -149,9 +167,30 @@ export default {
     },
   },
 
+  // Blog
+  blog: {
+    title: 'المقالات',
+    subtitle: 'أحدث المقالات والنصائح والرؤى حول الطباعة ثلاثية الأبعاد والهدايا المؤسسية.',
+    noArticles: 'لا توجد مقالات بعد',
+    checkBack: 'تابعنا قريباً لمحتوى جديد.',
+    backToBlog: 'العودة للمقالات',
+  },
+
   // Privacy Page
   privacy: {
     title: 'سياسة الخصوصية',
+  },
+
+  // Login
+  login: {
+    title: 'تسجيل دخول المشرف',
+    subtitle: 'سجل الدخول لإدارة المنتجات',
+    username: 'اسم المستخدم',
+    usernamePlaceholder: 'أدخل اسم المستخدم',
+    password: 'كلمة المرور',
+    passwordPlaceholder: 'أدخل كلمة المرور',
+    submit: 'تسجيل الدخول',
+    submitting: 'جارٍ تسجيل الدخول...',
   },
 
   // Footer

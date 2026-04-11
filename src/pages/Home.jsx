@@ -3,6 +3,7 @@ import { useProducts } from '../context/ProductContext';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
 import { useLocalizedProducts, useLocalizedCategories } from '../hooks/useLocalized';
+import { useLanguage } from '../context/LanguageContext';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
@@ -12,6 +13,7 @@ export default function Home() {
   const { categories: rawCategories } = useCategories();
   const products = useLocalizedProducts(rawProducts);
   const categories = useLocalizedCategories(rawCategories);
+  const { t } = useLanguage();
   const featured = products.slice(0, 4);
 
   return (
@@ -114,11 +116,11 @@ export default function Home() {
               to="/products"
               className="hidden sm:inline-flex items-center text-sm font-medium text-primary hover:text-primary-dark no-underline transition-colors"
             >
-              View All &rarr;
+              {t('common.viewAll')} &rarr;
             </Link>
           </div>
           {loading ? (
-            <div className="text-center py-12 text-text-muted">Loading products...</div>
+            <div className="text-center py-12 text-text-muted">{t('common.loading')}</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featured.map((product) => (
@@ -131,7 +133,7 @@ export default function Home() {
               to="/products"
               className="text-sm font-medium text-primary hover:text-primary-dark no-underline"
             >
-              View All Products &rarr;
+              {t('home.viewAll')} &rarr;
             </Link>
           </div>
         </div>

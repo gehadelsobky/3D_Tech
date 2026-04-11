@@ -32,6 +32,8 @@ export default {
     searchPlaceholder: 'Search products...',
     allCategories: 'All',
     noResults: 'No products found.',
+    noResultsDescription: 'Try adjusting your search or filter criteria',
+    showingOf: 'Showing {count} of {total} products',
     moq: 'MOQ',
     units: 'units',
     relatedTitle: 'Related Products',
@@ -76,24 +78,40 @@ export default {
     title: 'Get a Quote',
     subtitle: 'Fill out the form below and we\'ll get back to you within 24 hours.',
     name: 'Full Name',
+    namePlaceholder: 'John Smith',
     company: 'Company Name',
+    companyPlaceholder: 'Acme Corp',
     email: 'Email Address',
+    emailPlaceholder: 'john@example.com',
     phone: 'Phone Number',
+    phonePlaceholder: '+20 10XXXXXXXX',
     giftType: 'Gift Type',
     selectGiftType: 'Select gift type...',
     product: 'Interested Product',
     selectProduct: 'Select a product (optional)...',
     quantity: 'Quantity',
+    quantityPlaceholder: 'e.g. 100 units',
     budget: 'Budget Range',
+    budgetPlaceholder: 'e.g. EGP 5,000 - EGP 10,000',
     selectBudget: 'Select budget range...',
     deliveryDate: 'Delivery Date',
     message: 'Additional Notes',
+    messagePlaceholder: 'Tell us about your project, branding needs, or any specific requirements...',
     submit: 'Submit Request',
     submitting: 'Submitting...',
     successTitle: 'Thank You!',
     successMessage: 'Your request has been submitted successfully. We\'ll get back to you soon.',
     submitAnother: 'Submit Another Request',
     contactInfo: 'Contact Information',
+    requestingFor: 'Requesting quote for:',
+    emailLabel: 'Email',
+    phoneLabel: 'Phone',
+    locationLabel: 'Location',
+    whyUs: 'Why {company}?',
+    errNameRequired: 'Name is required',
+    errEmailRequired: 'Email is required',
+    errEmailInvalid: 'Invalid email format',
+    errPhoneRequired: 'Phone is required',
   },
 
   // Gift Finder
@@ -150,9 +168,30 @@ export default {
     },
   },
 
+  // Blog
+  blog: {
+    title: 'Blog',
+    subtitle: 'Latest articles, tips, and insights about 3D printing and corporate gifts.',
+    noArticles: 'No articles yet',
+    checkBack: 'Check back soon for new content.',
+    backToBlog: 'Back to Blog',
+  },
+
   // Privacy Page
   privacy: {
     title: 'Privacy Policy',
+  },
+
+  // Login
+  login: {
+    title: 'Admin Login',
+    subtitle: 'Sign in to manage products',
+    username: 'Username',
+    usernamePlaceholder: 'Enter username',
+    password: 'Password',
+    passwordPlaceholder: 'Enter password',
+    submit: 'Sign In',
+    submitting: 'Signing in...',
   },
 
   // Footer

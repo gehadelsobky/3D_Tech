@@ -35,8 +35,8 @@ export default function Blog() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl font-bold mb-3">Blog</h1>
-          <p className="text-gray-300 max-w-xl mx-auto">Latest articles, tips, and insights about 3D printing and corporate gifts.</p>
+          <h1 className="text-4xl font-bold mb-3">{t('blog.title')}</h1>
+          <p className="text-gray-300 max-w-xl mx-auto">{t('blog.subtitle')}</p>
         </div>
       </section>
 
@@ -44,8 +44,8 @@ export default function Blog() {
         {posts.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">&#128221;</div>
-            <h2 className="text-xl font-semibold text-text mb-2">No articles yet</h2>
-            <p className="text-text-muted">Check back soon for new content.</p>
+            <h2 className="text-xl font-semibold text-text mb-2">{t('blog.noArticles')}</h2>
+            <p className="text-text-muted">{t('blog.checkBack')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

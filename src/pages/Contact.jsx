@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGiftSettings } from '../context/GiftSettingsContext';
 import { usePageContent } from '../context/PageContentContext';
+import { useLanguage } from '../context/LanguageContext';
 import { apiPost } from '../lib/api';
 import SEO from '../components/SEO';
 
@@ -23,6 +24,7 @@ export default function Contact() {
   const [searchParams] = useSearchParams();
   const { settings } = useGiftSettings();
   const { content: c, global: g } = usePageContent('contact');
+  const { t } = useLanguage();
   const giftTypes = settings?.giftTypes || [];
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
@@ -44,10 +46,10 @@ export default function Contact() {
 
   const validate = () => {
     const errs = {};
-    if (!form.name.trim()) errs.name = 'Name is required';
-    if (!form.email.trim()) errs.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email format';
-    if (!form.phone.trim()) errs.phone = 'Phone is required';
+    if (!form.name.trim()) errs.name = t('contact.errNameRequired');
+    if (!form.email.trim()) errs.email = t('contact.errEmailRequired');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = t('contact.errEmailInvalid');
+    if (!form.phone.trim()) errs.phone = t('contact.errPhoneRequired');
     if (form.honeypot) return null;
     return errs;
   };
@@ -125,63 +127,63 @@ export default function Contact() {
 
               {form.product && (
                 <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-primary">
-                  Requesting quote for: <strong>{form.product}</strong>
+                  {t('contact.requestingFor')} <strong>{form.product}</strong>
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Name *</label>
-                  <input type="text" name="name" value={form.name} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${errors.name ? 'border-red-300' : 'border-gray-200'}`} placeholder="John Smith" />
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.name')} *</label>
+                  <input type="text" name="name" value={form.name} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${errors.name ? 'border-red-300' : 'border-gray-200'}`} placeholder={t('contact.namePlaceholder')} />
                   {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Company</label>
-                  <input type="text" name="company" value={form.company} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Acme Corp" />
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.company')}</label>
+                  <input type="text" name="company" value={form.company} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder={t('contact.companyPlaceholder')} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Email *</label>
-                  <input type="email" name="email" value={form.email} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${errors.email ? 'border-red-300' : 'border-gray-200'}`} placeholder="john@example.com" />
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.email')} *</label>
+                  <input type="email" name="email" value={form.email} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${errors.email ? 'border-red-300' : 'border-gray-200'}`} placeholder={t('contact.emailPlaceholder')} />
                   {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Phone *</label>
-                  <input type="tel" name="phone" value={form.phone} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${errors.phone ? 'border-red-300' : 'border-gray-200'}`} placeholder="+20 10XXXXXXXX" />
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.phone')} *</label>
+                  <input type="tel" name="phone" value={form.phone} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${errors.phone ? 'border-red-300' : 'border-gray-200'}`} placeholder={t('contact.phonePlaceholder')} />
                   {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Gift Type</label>
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.giftType')}</label>
                   <select name="giftType" value={form.giftType} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white">
-                    <option value="">Select gift type</option>
+                    <option value="">{t('contact.selectGiftType')}</option>
                     {giftTypes.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Quantity</label>
-                  <input type="text" name="quantity" value={form.quantity} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. 100 units" />
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.quantity')}</label>
+                  <input type="text" name="quantity" value={form.quantity} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder={t('contact.quantityPlaceholder')} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Budget</label>
-                  <input type="text" name="budget" value={form.budget} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. EGP 5000 - EGP 10000" />
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.budget')}</label>
+                  <input type="text" name="budget" value={form.budget} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder={t('contact.budgetPlaceholder')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1.5">Delivery Date</label>
+                  <label className="block text-sm font-medium text-text mb-1.5">{t('contact.deliveryDate')}</label>
                   <input type="date" name="deliveryDate" value={form.deliveryDate} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text mb-1.5">Additional Notes</label>
-                <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder="Tell us about your project, branding needs, or any specific requirements..." />
+                <label className="block text-sm font-medium text-text mb-1.5">{t('contact.message')}</label>
+                <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder={t('contact.messagePlaceholder')} />
               </div>
 
               {submitError && (
@@ -189,7 +191,7 @@ export default function Contact() {
               )}
 
               <button type="submit" disabled={submitting} className="w-full sm:w-auto px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors cursor-pointer border-none disabled:opacity-50">
-                {submitting ? 'Submitting...' : (c.submitButton || 'Submit Quote Request')}
+                {submitting ? t('contact.submitting') : (c.submitButton || t('contact.submit'))}
               </button>
             </form>
           </div>
@@ -197,26 +199,26 @@ export default function Contact() {
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-gray-100 p-6">
-              <h3 className="font-semibold text-text mb-4">Contact Information</h3>
+              <h3 className="font-semibold text-text mb-4">{t('contact.contactInfo')}</h3>
               <div className="space-y-4 text-sm">
                 <div>
-                  <div className="text-text-muted mb-1">Email</div>
+                  <div className="text-text-muted mb-1">{t('contact.emailLabel')}</div>
                   <div className="font-medium text-text">{g.email || 'info@3dtecheg.com'}</div>
                 </div>
                 <div>
-                  <div className="text-text-muted mb-1">Phone</div>
+                  <div className="text-text-muted mb-1">{t('contact.phoneLabel')}</div>
                   <div className="font-medium text-text">{g.phone1 || '+201018559479'}</div>
                   {g.phone2 && <div className="font-medium text-text">{g.phone2}</div>}
                 </div>
                 <div>
-                  <div className="text-text-muted mb-1">Location</div>
+                  <div className="text-text-muted mb-1">{t('contact.locationLabel')}</div>
                   <div className="font-medium text-text">{g.location || 'Cairo, Egypt'}</div>
                 </div>
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-100 p-6">
-              <h3 className="font-semibold text-text mb-4">Why {g.companyName || '3DTech'}?</h3>
+              <h3 className="font-semibold text-text mb-4">{t('contact.whyUs').replace('{company}', g.companyName || '3DTech')}</h3>
               <ul className="space-y-3 text-sm text-text-muted list-none p-0 m-0">
                 {(g.whyUs || ['Free design mockup', '24-hour quote turnaround', 'No hidden fees', 'Bulk order discounts', 'Quality guarantee']).map((item) => (
                   <li key={item} className="flex items-start gap-2">

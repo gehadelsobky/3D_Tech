@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 
-const matchBadges = [
-  { key: 'budgetFit', label: 'Budget', color: 'bg-green-50 text-green-700' },
-  { key: 'deliveryFit', label: 'Timeline', color: 'bg-blue-50 text-blue-700' },
-  { key: 'audienceMatch', label: 'Audience', color: 'bg-purple-50 text-purple-700' },
-  { key: 'qtyFit', label: 'MOQ fits', color: 'bg-gray-100 text-gray-600' },
+const matchBadgeKeys = [
+  { key: 'budgetFit', tKey: 'giftFinder.budget', color: 'bg-green-50 text-green-700' },
+  { key: 'deliveryFit', tKey: 'giftFinder.timeline', color: 'bg-blue-50 text-blue-700' },
+  { key: 'audienceMatch', tKey: 'giftFinder.audience', color: 'bg-purple-50 text-purple-700' },
+  { key: 'qtyFit', tKey: 'products.moq', color: 'bg-gray-100 text-gray-600' },
 ];
 
 export default function ProductCard({ product, matchInfo }) {
+  const { t } = useLanguage();
   return (
     <Link
       to={`/products/${product.id}`}
@@ -33,14 +35,14 @@ export default function ProductCard({ product, matchInfo }) {
         </p>
         <div className="flex items-center justify-between text-xs text-text-muted">
           <span>{product.priceRange}</span>
-          <span>MOQ: {product.moq}</span>
+          <span>{t('products.moq')}: {product.moq}</span>
         </div>
         {matchInfo && (
           <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-gray-100">
-            {matchBadges.map(({ key, label, color }) =>
+            {matchBadgeKeys.map(({ key, tKey, color }) =>
               matchInfo[key] ? (
                 <span key={key} className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${color}`}>
-                  ✓ {label}
+                  ✓ {t(tKey)}
                 </span>
               ) : null
             )}

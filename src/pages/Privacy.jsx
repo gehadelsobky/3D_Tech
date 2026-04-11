@@ -1,8 +1,10 @@
 import { usePageContent } from '../context/PageContentContext';
+import { useLanguage } from '../context/LanguageContext';
 import SEO from '../components/SEO';
 
 export default function Privacy() {
   const { global: g } = usePageContent();
+  const { t } = useLanguage();
   const email = g.email || 'info@3dtecheg.com';
   const company = g.companyName || '3D Tech';
 
@@ -13,7 +15,7 @@ export default function Privacy() {
         description={`Privacy policy for ${company}. Learn how we collect, use, and protect your personal information.`}
       />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <h1 className="text-3xl font-bold text-text mb-8">Privacy Policy</h1>
+        <h1 className="text-3xl font-bold text-text mb-8">{t('privacy.title')}</h1>
 
         <div className="bg-white rounded-xl border border-gray-100 p-6 md:p-8 space-y-6 text-sm text-text-muted leading-relaxed">
           <p className="text-xs text-text-muted">Last updated: February 2026</p>

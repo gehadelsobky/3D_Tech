@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useLocalizedProducts } from '../hooks/useLocalized';
+import { useLanguage } from '../context/LanguageContext';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
@@ -10,12 +11,13 @@ export default function ProductDetail() {
   const { products: rawProducts, loading } = useProducts();
   const products = useLocalizedProducts(rawProducts);
   const product = products.find((p) => p.id === Number(id));
+  const { t } = useLanguage();
   const [activeImage, setActiveImage] = useState(0);
 
   if (loading) {
     return (
       <main className="bg-surface min-h-screen flex items-center justify-center">
-        <div className="text-text-muted">Loading...</div>
+        <div className="text-text-muted">{t('common.loading')}</div>
       </main>
     );
   }
@@ -54,9 +56,9 @@ export default function ProductDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-text-muted mb-8">
-          <Link to="/" className="hover:text-primary no-underline text-text-muted">Home</Link>
+          <Link to="/" className="hover:text-primary no-underline text-text-muted">{t('nav.home')}</Link>
           <span>/</span>
-          <Link to="/products" className="hover:text-primary no-underline text-text-muted">Products</Link>
+          <Link to="/products" className="hover:text-primary no-underline text-text-muted">{t('nav.products')}</Link>
           <span>/</span>
           <span className="text-text">{product.name}</span>
         </nav>
@@ -99,26 +101,26 @@ export default function ProductDetail() {
             {/* Quick Info */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <div className="text-xs text-text-muted mb-1">Price Range</div>
+                <div className="text-xs text-text-muted mb-1">{t('productDetail.priceRange')}</div>
                 <div className="font-semibold text-text">{product.priceRange}</div>
               </div>
               <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <div className="text-xs text-text-muted mb-1">Min. Order</div>
-                <div className="font-semibold text-text">{product.moq} units</div>
+                <div className="text-xs text-text-muted mb-1">{t('productDetail.minOrder')}</div>
+                <div className="font-semibold text-text">{product.moq} {t('products.units')}</div>
               </div>
               <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <div className="text-xs text-text-muted mb-1">Lead Time</div>
+                <div className="text-xs text-text-muted mb-1">{t('productDetail.leadTime')}</div>
                 <div className="font-semibold text-text">{product.leadTime}</div>
               </div>
               <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <div className="text-xs text-text-muted mb-1">Notes</div>
+                <div className="text-xs text-text-muted mb-1">{t('productDetail.notes')}</div>
                 <div className="font-semibold text-text text-sm">{product.notes}</div>
               </div>
             </div>
 
             {/* Features */}
             <div className="mb-6">
-              <h3 className="font-semibold text-text mb-3">Features</h3>
+              <h3 className="font-semibold text-text mb-3">{t('productDetail.features')}</h3>
               <ul className="space-y-2">
                 {product.features.map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-text-muted">
@@ -133,7 +135,7 @@ export default function ProductDetail() {
 
             {/* Branding Options */}
             <div className="mb-8">
-              <h3 className="font-semibold text-text mb-3">Branding Options</h3>
+              <h3 className="font-semibold text-text mb-3">{t('productDetail.brandingOptions')}</h3>
               <div className="flex flex-wrap gap-2">
                 {product.brandingOptions.map((opt, i) => (
                   <span key={i} className="px-3 py-1.5 bg-gray-100 text-sm text-text-muted rounded-full">
@@ -148,7 +150,7 @@ export default function ProductDetail() {
               to={`/contact?product=${encodeURIComponent(product.name)}`}
               className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors no-underline"
             >
-              Request This Item
+              {t('productDetail.requestItem')}
             </Link>
           </div>
         </div>
@@ -157,7 +159,7 @@ export default function ProductDetail() {
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-t border-gray-100">
-          <h2 className="text-2xl font-bold text-text mb-6">Related Products</h2>
+          <h2 className="text-2xl font-bold text-text mb-6">{t('products.relatedTitle')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {relatedProducts.map(p => (
               <ProductCard key={p.id} product={p} />

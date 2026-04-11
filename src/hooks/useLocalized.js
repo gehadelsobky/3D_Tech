@@ -80,7 +80,7 @@ export function useLocalizedBlogPost(post) {
 export function useLocalizedBlogPosts(posts) {
   const { lang } = useLanguage();
   return useMemo(
-    () => posts.map(p => lang !== 'ar' ? p : {
+    () => (posts || []).map(p => lang !== 'ar' ? p : {
       ...p,
       title: p.title_ar || p.title,
       excerpt: p.excerpt_ar || p.excerpt,

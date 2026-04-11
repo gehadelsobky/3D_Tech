@@ -47,7 +47,7 @@ export default function BlogPost() {
         <nav className="flex items-center gap-2 text-sm text-text-muted mb-8">
           <Link to="/" className="hover:text-primary no-underline text-text-muted">{t('nav.home')}</Link>
           <span>/</span>
-          <Link to="/blog" className="hover:text-primary no-underline text-text-muted">Blog</Link>
+          <Link to="/blog" className="hover:text-primary no-underline text-text-muted">{t('blog.title')}</Link>
           <span>/</span>
           <span className="text-text truncate max-w-[200px]">{post.title}</span>
         </nav>
@@ -80,7 +80,7 @@ export default function BlogPost() {
 
         {/* Back to Blog */}
         <div className="mt-12 pt-8 border-t border-gray-200">
-          <Link to="/blog" className="text-primary font-medium no-underline hover:underline">&larr; Back to Blog</Link>
+          <Link to="/blog" className="text-primary font-medium no-underline hover:underline">&larr; {t('blog.backToBlog')}</Link>
         </div>
       </article>
     </main>
