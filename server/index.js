@@ -89,6 +89,16 @@ app.use('/api/forms/:slug/submit', formSubmitLimiter);
 // Initialize database (creates tables + seeds data on first run)
 initDb();
 
+// Health check — for monitoring / load balancer
+app.get('/api/health', (_req, res) => {
+  try {
+    db.prepare('SELECT 1').get();
+    res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: 'error', message: 'Database unavailable' });
+  }
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);

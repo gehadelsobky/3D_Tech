@@ -15,7 +15,9 @@ server/data.db-wal
 server/uploads/*
 !server/uploads/.gitkeep
 server/backups/
+logs/
 .env
+.env.production
 dist-ssr
 *.local
 
