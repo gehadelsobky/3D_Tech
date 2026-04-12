@@ -112,6 +112,42 @@ export function initDb() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      key_prefix TEXT NOT NULL,
+      permissions TEXT NOT NULL DEFAULT '[]',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      last_used_at TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      secret TEXT NOT NULL,
+      events TEXT NOT NULL DEFAULT '[]',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS webhook_deliveries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      webhook_id INTEGER NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+      event TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      response_status INTEGER,
+      response_body TEXT,
+      success INTEGER NOT NULL DEFAULT 0,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_attempt_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // ---- Ensure users table exists (legacy or fresh) ----
@@ -189,6 +225,10 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
     CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
     CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+    CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+    CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
+    CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
+    CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_created ON webhook_deliveries(created_at);
   `);
 
   // ---- Seed default roles ----

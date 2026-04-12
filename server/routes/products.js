@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
+import { emitEvent } from '../webhookEmitter.js';
 
 const router = Router();
 
@@ -77,7 +78,9 @@ router.post('/', authenticate, requirePermission('products.create'), (req, res) 
   );
 
   const created = db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json(rowToProduct(created));
+  const product = rowToProduct(created);
+  emitEvent('product.created', product);
+  res.status(201).json(product);
 });
 
 // PUT /api/products/:id (admin only)
@@ -122,7 +125,9 @@ router.put('/:id', authenticate, requirePermission('products.edit'), (req, res) 
   );
 
   const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
-  res.json(rowToProduct(updated));
+  const product = rowToProduct(updated);
+  emitEvent('product.updated', product);
+  res.json(product);
 });
 
 // DELETE /api/products/:id (admin only)
@@ -133,6 +138,7 @@ router.delete('/:id', authenticate, requirePermission('products.delete'), (req, 
   }
 
   db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
+  emitEvent('product.deleted', { id: Number(req.params.id) });
   res.json({ success: true });
 });
 

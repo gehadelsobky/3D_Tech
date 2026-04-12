@@ -18,6 +18,10 @@ export const ALL_PERMISSIONS = [
   'forms.delete',
   'settings.smtp',
   'settings.backup',
+  'api_keys.view',
+  'api_keys.manage',
+  'webhooks.view',
+  'webhooks.manage',
   'files.upload',
   'files.delete',
 ];
@@ -76,6 +80,15 @@ export const PERMISSION_GROUPS = [
     permissions: [
       { key: 'settings.smtp', label: 'SMTP Configuration' },
       { key: 'settings.backup', label: 'Backup & Restore' },
+    ],
+  },
+  {
+    label: 'Integrations',
+    permissions: [
+      { key: 'api_keys.view', label: 'View API Keys' },
+      { key: 'api_keys.manage', label: 'Manage API Keys' },
+      { key: 'webhooks.view', label: 'View Webhooks' },
+      { key: 'webhooks.manage', label: 'Manage Webhooks' },
     ],
   },
   {

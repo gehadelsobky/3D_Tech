@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import db from '../db.js';
 import { authenticate, requirePermission, JWT_SECRET } from '../middleware/auth.js';
 import { sendFormNotification, sendConfirmationEmail } from '../email.js';
+import { emitEvent } from '../webhookEmitter.js';
 
 const router = Router();
 
@@ -110,6 +111,9 @@ router.post('/:slug/submit', (req, res) => {
   }
 
   db.prepare("INSERT INTO form_submissions (form_id, data) VALUES (?, ?)").run(form.id, JSON.stringify(data));
+
+  // Emit webhook event
+  emitEvent('form.submitted', { formName: form.name, formSlug: req.params.slug, data });
 
   // Send email notifications (fire and forget)
   sendFormNotification(form.name, data).catch(() => {});

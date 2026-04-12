@@ -19,6 +19,8 @@ import uploadRoutes from './routes/upload.js';
 import blogRoutes from './routes/blog.js';
 import exportRoutes from './routes/export.js';
 import backupRoutes from './routes/backup.js';
+import apiKeyRoutes from './routes/api-keys.js';
+import webhookRoutes from './routes/webhooks.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -126,6 +128,8 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Dashboard stats endpoint (admin)
 import { authenticate } from './middleware/auth.js';

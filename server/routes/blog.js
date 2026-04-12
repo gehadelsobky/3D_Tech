@@ -2,6 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
 import { authenticate, requirePermission, JWT_SECRET } from '../middleware/auth.js';
+import { emitEvent } from '../webhookEmitter.js';
 
 const router = Router();
 
@@ -51,7 +52,9 @@ router.post('/', authenticate, requirePermission('pages.edit'), (req, res) => {
   ).run(title, title_ar || '', slug, excerpt || '', excerpt_ar || '', content || '', content_ar || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []));
 
   const created = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ ...created, tags: JSON.parse(created.tags) });
+  const post = { ...created, tags: JSON.parse(created.tags) };
+  if (post.status === 'published') emitEvent('blog.published', post);
+  res.status(201).json(post);
 });
 
 // PUT /api/blog/:id — update a post
@@ -68,7 +71,9 @@ router.put('/:id', authenticate, requirePermission('pages.edit'), (req, res) => 
   `).run(title, title_ar || '', excerpt || '', excerpt_ar || '', content || '', content_ar || '', cover_image || '', author || 'Admin', status || 'draft', JSON.stringify(tags || []), id);
 
   const updated = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id);
-  res.json({ ...updated, tags: JSON.parse(updated.tags) });
+  const post = { ...updated, tags: JSON.parse(updated.tags) };
+  if (post.status === 'published') emitEvent('blog.published', post);
+  res.json(post);
 });
 
 // DELETE /api/blog/:id — delete a post

@@ -661,6 +661,100 @@ export default function Admin() {
     }
   };
 
+  // ==================== INTEGRATIONS STATE ====================
+  const [apiKeys, setApiKeys] = useState([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [newKeyResult, setNewKeyResult] = useState(null);
+  const [apiKeyForm, setApiKeyForm] = useState({ name: '', permissions: [] });
+  const [apiKeyCreating, setApiKeyCreating] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState('');
+
+  const [webhooks, setWebhooks] = useState([]);
+  const [webhooksLoading, setWebhooksLoading] = useState(false);
+  const [webhookForm, setWebhookForm] = useState(null);
+  const [webhookSaving, setWebhookSaving] = useState(false);
+  const [webhookError, setWebhookError] = useState('');
+  const [webhookDeliveries, setWebhookDeliveries] = useState(null);
+  const [webhookTesting, setWebhookTesting] = useState(null);
+
+  const WEBHOOK_EVENTS = ['form.submitted', 'product.created', 'product.updated', 'product.deleted', 'blog.published'];
+
+  const fetchApiKeys = useCallback(async () => {
+    setApiKeysLoading(true);
+    try { setApiKeys(await apiGet('/api-keys')); } catch {} finally { setApiKeysLoading(false); }
+  }, []);
+
+  const fetchWebhooks = useCallback(async () => {
+    setWebhooksLoading(true);
+    try { setWebhooks(await apiGet('/webhooks')); } catch {} finally { setWebhooksLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'integrations') {
+      if (hasPermission('api_keys.view')) fetchApiKeys();
+      if (hasPermission('webhooks.view')) fetchWebhooks();
+    }
+  }, [activeTab, hasPermission, fetchApiKeys, fetchWebhooks]);
+
+  const createApiKey = async () => {
+    if (!apiKeyForm.name.trim()) { setApiKeyError('Name is required'); return; }
+    if (apiKeyForm.permissions.length === 0) { setApiKeyError('Select at least one permission'); return; }
+    setApiKeyError('');
+    setApiKeyCreating(true);
+    try {
+      const result = await apiPost('/api-keys', apiKeyForm);
+      setNewKeyResult(result);
+      setApiKeyForm({ name: '', permissions: [] });
+      fetchApiKeys();
+    } catch (err) { setApiKeyError(err.message || 'Failed to create'); } finally { setApiKeyCreating(false); }
+  };
+
+  const revokeApiKey = async (id) => {
+    if (!confirm('Revoke this API key? Any integrations using it will stop working.')) return;
+    try { await apiDelete(`/api-keys/${id}`); fetchApiKeys(); } catch {}
+  };
+
+  const toggleApiKey = async (id, currentActive) => {
+    try { await apiPatch(`/api-keys/${id}`, { is_active: !currentActive }); fetchApiKeys(); } catch {}
+  };
+
+  const saveWebhook = async () => {
+    if (!webhookForm.name?.trim()) { setWebhookError('Name is required'); return; }
+    if (!webhookForm.url?.trim()) { setWebhookError('URL is required'); return; }
+    if (!webhookForm.events?.length) { setWebhookError('Select at least one event'); return; }
+    setWebhookError('');
+    setWebhookSaving(true);
+    try {
+      if (webhookForm.id) {
+        await apiPut(`/webhooks/${webhookForm.id}`, webhookForm);
+      } else {
+        await apiPost('/webhooks', webhookForm);
+      }
+      setWebhookForm(null);
+      fetchWebhooks();
+    } catch (err) { setWebhookError(err.message || 'Failed to save'); } finally { setWebhookSaving(false); }
+  };
+
+  const deleteWebhook = async (id) => {
+    if (!confirm('Delete this webhook?')) return;
+    try { await apiDelete(`/webhooks/${id}`); fetchWebhooks(); } catch {}
+  };
+
+  const testWebhook = async (id) => {
+    setWebhookTesting(id);
+    try {
+      const result = await apiPost(`/webhooks/${id}/test`);
+      alert(result.message || 'Test sent!');
+    } catch (err) { alert(err.message || 'Test failed'); } finally { setWebhookTesting(null); }
+  };
+
+  const viewDeliveries = async (id) => {
+    try {
+      const data = await apiGet(`/webhooks/${id}/deliveries?limit=20`);
+      setWebhookDeliveries(data);
+    } catch {}
+  };
+
   // ==================== LAYOUT (HEADER & FOOTER) STATE ====================
   const [layoutEditing, setLayoutEditing] = useState(false);
   const [layoutForm, setLayoutForm] = useState(null);
@@ -1274,6 +1368,7 @@ export default function Admin() {
             hasPermission('pages.edit') && { key: 'blog', label: 'Blog' },
             hasPermission('pages.edit') && { key: 'layout', label: 'Header & Footer' },
             hasPermission('settings.smtp') && { key: 'settings', label: 'Settings' },
+            (hasPermission('api_keys.view') || hasPermission('webhooks.view')) && { key: 'integrations', label: 'Integrations' },
           ].filter(Boolean).map((tab) => (
             <button
               key={tab.key}
@@ -3177,6 +3272,301 @@ export default function Admin() {
               </div>
             )}
           </>
+        )}
+        {/* ==================== INTEGRATIONS TAB ==================== */}
+        {activeTab === 'integrations' && (hasPermission('api_keys.view') || hasPermission('webhooks.view')) && (
+          <div className="space-y-6">
+            {/* ---- API Keys Section ---- */}
+            {hasPermission('api_keys.view') && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-text text-lg">API Keys</h3>
+                    <p className="text-xs text-text-muted mt-1">Create API keys for external services like n8n, Make, or Google Sheets to access your data.</p>
+                  </div>
+                </div>
+
+                {apiKeyError && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{apiKeyError}</div>}
+
+                {/* New Key Result (shown once) */}
+                {newKeyResult && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-green-800">API Key Created — Copy it now!</span>
+                      <button onClick={() => setNewKeyResult(null)} className="text-green-600 hover:text-green-800 text-xs cursor-pointer">Dismiss</button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-2 bg-white border border-green-300 rounded text-xs font-mono break-all select-all">{newKeyResult.key}</code>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(newKeyResult.key); }}
+                        className="px-3 py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer"
+                      >Copy</button>
+                    </div>
+                    <p className="text-[10px] text-green-700 font-medium">This key will NOT be shown again. Store it securely.</p>
+                  </div>
+                )}
+
+                {/* Create New Key */}
+                {hasPermission('api_keys.manage') && (
+                  <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+                    <h4 className="text-sm font-medium text-text">Create New API Key</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Key Name *</label>
+                        <input
+                          type="text"
+                          value={apiKeyForm.name}
+                          onChange={(e) => setApiKeyForm(prev => ({ ...prev, name: e.target.value }))}
+                          className={'w-full ' + inputClass}
+                          placeholder="e.g., n8n Integration"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-2">Permissions *</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {['products.view', 'products.create', 'products.edit', 'products.delete', 'forms.view', 'forms.create', 'forms.edit', 'pages.view', 'pages.edit'].map(perm => (
+                          <label key={perm} className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={apiKeyForm.permissions.includes(perm)}
+                              onChange={(e) => {
+                                setApiKeyForm(prev => ({
+                                  ...prev,
+                                  permissions: e.target.checked
+                                    ? [...prev.permissions, perm]
+                                    : prev.permissions.filter(p => p !== perm)
+                                }));
+                              }}
+                            />
+                            {perm}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={createApiKey} disabled={apiKeyCreating} className={btnPrimary}>
+                      {apiKeyCreating ? 'Creating...' : 'Create API Key'}
+                    </button>
+                  </div>
+                )}
+
+                {/* API Keys List */}
+                {apiKeysLoading ? (
+                  <div className="text-center py-6 text-text-muted text-sm">Loading API keys...</div>
+                ) : apiKeys.length === 0 ? (
+                  <div className="text-center py-6 text-text-muted text-sm">No API keys created yet.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 text-left text-text-muted text-xs">
+                          <th className="py-2 px-3">Name</th>
+                          <th className="py-2 px-3">Key Prefix</th>
+                          <th className="py-2 px-3">Permissions</th>
+                          <th className="py-2 px-3">Last Used</th>
+                          <th className="py-2 px-3">Status</th>
+                          <th className="py-2 px-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {apiKeys.map(key => (
+                          <tr key={key.id} className="border-b border-gray-50 hover:bg-gray-50">
+                            <td className="py-2 px-3 font-medium text-text">{key.name}</td>
+                            <td className="py-2 px-3"><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{key.key_prefix}...</code></td>
+                            <td className="py-2 px-3 text-xs text-text-muted">{key.permissions.length} perms</td>
+                            <td className="py-2 px-3 text-xs text-text-muted">{key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}</td>
+                            <td className="py-2 px-3">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${key.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {key.is_active ? 'Active' : 'Revoked'}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3">
+                              {hasPermission('api_keys.manage') && (
+                                <div className="flex gap-2">
+                                  <button onClick={() => toggleApiKey(key.id, key.is_active)} className="text-xs text-accent hover:underline cursor-pointer">
+                                    {key.is_active ? 'Disable' : 'Enable'}
+                                  </button>
+                                  <button onClick={() => revokeApiKey(key.id)} className="text-xs text-red-500 hover:underline cursor-pointer">Delete</button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Usage Example */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-accent-dark mb-2">Usage</h4>
+                  <p className="text-xs text-text-muted mb-2">Send requests with the API key in the <code className="bg-white px-1 rounded">X-API-Key</code> header:</p>
+                  <code className="block text-xs bg-white p-2 rounded border border-blue-100 break-all">
+                    curl -H "X-API-Key: 3dt_your_key_here" https://yourdomain.com/api/products
+                  </code>
+                </div>
+              </div>
+            )}
+
+            {/* ---- Webhooks Section ---- */}
+            {hasPermission('webhooks.view') && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-text text-lg">Webhooks</h3>
+                    <p className="text-xs text-text-muted mt-1">Automatically send event notifications to external URLs when actions happen in the system.</p>
+                  </div>
+                  {hasPermission('webhooks.manage') && !webhookForm && (
+                    <button onClick={() => setWebhookForm({ name: '', url: '', secret: '', events: [], is_active: true })} className={btnPrimary}>
+                      + Add Webhook
+                    </button>
+                  )}
+                </div>
+
+                {webhookError && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{webhookError}</div>}
+
+                {/* Webhook Form (Create/Edit) */}
+                {webhookForm && (
+                  <div className="p-4 bg-gray-50 rounded-lg space-y-3 border border-gray-200">
+                    <h4 className="text-sm font-medium text-text">{webhookForm.id ? 'Edit Webhook' : 'New Webhook'}</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Name *</label>
+                        <input type="text" value={webhookForm.name} onChange={(e) => setWebhookForm(prev => ({ ...prev, name: e.target.value }))} className={'w-full ' + inputClass} placeholder="e.g., n8n Automation" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">URL *</label>
+                        <input type="url" value={webhookForm.url} onChange={(e) => setWebhookForm(prev => ({ ...prev, url: e.target.value }))} className={'w-full ' + inputClass} placeholder="https://n8n.example.com/webhook/..." />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Secret (HMAC signing key)</label>
+                        <input type="text" value={webhookForm.secret} onChange={(e) => setWebhookForm(prev => ({ ...prev, secret: e.target.value }))} className={'w-full ' + inputClass} placeholder="Auto-generated if empty" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-2">Events *</label>
+                      <div className="flex flex-wrap gap-2">
+                        {WEBHOOK_EVENTS.map(evt => (
+                          <label key={evt} className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer bg-white px-2 py-1 rounded border border-gray-200">
+                            <input
+                              type="checkbox"
+                              checked={webhookForm.events?.includes(evt) || false}
+                              onChange={(e) => {
+                                setWebhookForm(prev => ({
+                                  ...prev,
+                                  events: e.target.checked
+                                    ? [...(prev.events || []), evt]
+                                    : (prev.events || []).filter(ev => ev !== evt)
+                                }));
+                              }}
+                            />
+                            {evt}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={saveWebhook} disabled={webhookSaving} className={btnPrimary}>{webhookSaving ? 'Saving...' : 'Save Webhook'}</button>
+                      <button onClick={() => { setWebhookForm(null); setWebhookError(''); }} className={btnSecondary}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Webhooks List */}
+                {webhooksLoading ? (
+                  <div className="text-center py-6 text-text-muted text-sm">Loading webhooks...</div>
+                ) : webhooks.length === 0 && !webhookForm ? (
+                  <div className="text-center py-6 text-text-muted text-sm">No webhooks configured yet.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {webhooks.map(wh => (
+                      <div key={wh.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-text text-sm">{wh.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${wh.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {wh.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-text-muted mt-1 truncate">{wh.url}</p>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {wh.events.map(evt => (
+                                <span key={evt} className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-accent-dark rounded">{evt}</span>
+                              ))}
+                            </div>
+                          </div>
+                          {hasPermission('webhooks.manage') && (
+                            <div className="flex gap-2 shrink-0">
+                              <button onClick={() => testWebhook(wh.id)} disabled={webhookTesting === wh.id} className="text-xs text-accent hover:underline cursor-pointer">
+                                {webhookTesting === wh.id ? 'Testing...' : 'Test'}
+                              </button>
+                              <button onClick={() => viewDeliveries(wh.id)} className="text-xs text-text-muted hover:underline cursor-pointer">Logs</button>
+                              <button onClick={() => { setWebhookForm({ ...wh }); setWebhookError(''); }} className="text-xs text-accent hover:underline cursor-pointer">Edit</button>
+                              <button onClick={() => deleteWebhook(wh.id)} className="text-xs text-red-500 hover:underline cursor-pointer">Delete</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Delivery Log Modal */}
+                {webhookDeliveries && (
+                  <div className="p-4 bg-white rounded-lg border border-gray-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-text">Delivery Log ({webhookDeliveries.total} total)</h4>
+                      <button onClick={() => setWebhookDeliveries(null)} className="text-xs text-text-muted hover:text-text cursor-pointer">Close</button>
+                    </div>
+                    {webhookDeliveries.deliveries.length === 0 ? (
+                      <p className="text-xs text-text-muted">No deliveries yet.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-gray-100 text-left text-text-muted">
+                              <th className="py-1.5 px-2">Event</th>
+                              <th className="py-1.5 px-2">Status</th>
+                              <th className="py-1.5 px-2">Attempts</th>
+                              <th className="py-1.5 px-2">Time</th>
+                              <th className="py-1.5 px-2">Response</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {webhookDeliveries.deliveries.map(d => (
+                              <tr key={d.id} className="border-b border-gray-50">
+                                <td className="py-1.5 px-2 text-text">{d.event}</td>
+                                <td className="py-1.5 px-2">
+                                  <span className={`px-1.5 py-0.5 rounded-full ${d.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {d.response_status || 'ERR'}
+                                  </span>
+                                </td>
+                                <td className="py-1.5 px-2 text-text-muted">{d.attempts}</td>
+                                <td className="py-1.5 px-2 text-text-muted">{new Date(d.created_at).toLocaleString()}</td>
+                                <td className="py-1.5 px-2 text-text-muted max-w-[200px] truncate">{d.response_body || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Webhook Payload Example */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-accent-dark mb-2">Payload Format</h4>
+                  <p className="text-xs text-text-muted mb-2">Each webhook receives a JSON POST with an HMAC-SHA256 signature in the <code className="bg-white px-1 rounded">X-Webhook-Signature</code> header:</p>
+                  <pre className="text-xs bg-white p-3 rounded border border-blue-100 overflow-x-auto">{`{
+  "event": "form.submitted",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "data": { ... }
+}`}</pre>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </main>
