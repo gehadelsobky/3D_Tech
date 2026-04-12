@@ -70,6 +70,44 @@ export async function testConnection(settings) {
   }
 }
 
+export async function sendConfirmationEmail(toEmail, submitterName, formName) {
+  const settings = getSmtpSettings();
+  if (!settings) return;
+
+  const name = escapeHtml(submitterName || 'Customer');
+  const form = escapeHtml(formName);
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;direction:ltr">
+      <div style="background:#dc2626;padding:20px;text-align:center;border-radius:8px 8px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:22px">3D Tech</h1>
+      </div>
+      <div style="padding:24px;background:#fff;border:1px solid #eee;border-top:none">
+        <h2 style="color:#333;margin-top:0">Thank you, ${name}!</h2>
+        <p style="color:#555;line-height:1.6">
+          We have received your <strong>${form}</strong> submission successfully.
+          Our team will review your request and get back to you within 24-48 hours.
+        </p>
+        <hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
+        <h2 style="color:#333;margin-top:0;direction:rtl;text-align:right">شكراً لك، ${name}!</h2>
+        <p style="color:#555;line-height:1.6;direction:rtl;text-align:right">
+          لقد تلقينا طلبك بنجاح. سيقوم فريقنا بمراجعة طلبك والرد عليك خلال ٢٤-٤٨ ساعة.
+        </p>
+      </div>
+      <div style="padding:16px;text-align:center;color:#999;font-size:12px;background:#f9f9f9;border-radius:0 0 8px 8px">
+        3D Tech — Custom 3D Printing & Corporate Gifts
+      </div>
+    </div>
+  `;
+
+  await sendMail({
+    to: toEmail,
+    subject: `Thank you for your submission — 3D Tech | شكراً لتواصلك`,
+    html,
+    text: `Thank you ${submitterName || 'Customer'}! We received your ${formName} submission. We'll get back to you within 24-48 hours.\n\nشكراً لك! لقد تلقينا طلبك بنجاح. سنرد عليك خلال ٢٤-٤٨ ساعة.`,
+  });
+}
+
 export async function sendFormNotification(formName, submissionData) {
   const settings = getSmtpSettings();
   if (!settings || !settings.notifyEmail) return;

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
-import { sendFormNotification } from '../email.js';
+import { sendFormNotification, sendConfirmationEmail } from '../email.js';
 
 const router = Router();
 
@@ -99,8 +99,15 @@ router.post('/:slug/submit', (req, res) => {
 
   db.prepare("INSERT INTO form_submissions (form_id, data) VALUES (?, ?)").run(form.id, JSON.stringify(data));
 
-  // Send email notification (fire and forget)
+  // Send email notifications (fire and forget)
   sendFormNotification(form.name, data).catch(() => {});
+
+  // Send confirmation email to user if email field exists
+  const emailField = data.email || data.Email || data.e_mail;
+  if (emailField) {
+    const nameField = data.name || data.Name || data.full_name || '';
+    sendConfirmationEmail(emailField, nameField, form.name).catch(() => {});
+  }
 
   res.status(201).json({ success: true });
 });
