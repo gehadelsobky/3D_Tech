@@ -40,6 +40,16 @@ export default function BlogPost() {
         description={post.excerpt?.slice(0, 160) || post.title}
         image={post.cover_image || undefined}
         type="article"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'BlogPosting',
+          headline: post.title,
+          description: post.excerpt || post.title,
+          image: post.cover_image || undefined,
+          datePublished: post.created_at,
+          author: { '@type': 'Organization', name: '3D Tech' },
+          publisher: { '@type': 'Organization', name: '3D Tech', logo: { '@type': 'ImageObject', url: `${window.location.origin}/logo.jpeg` } },
+        }}
       />
 
       <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

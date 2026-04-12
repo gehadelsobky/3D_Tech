@@ -23,6 +23,7 @@ export default function Home() {
       <SEO
         title={null}
         description="Custom 3D printed promotional products, corporate giveaways, and branded merchandise. Engineering models, prototyping, and premium corporate gifts in Egypt."
+        descriptionAr="منتجات ترويجية مطبوعة بتقنية الطباعة ثلاثية الأبعاد، هدايا شركات مخصصة، ونماذج هندسية احترافية في مصر."
       />
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-accent-dark via-accent to-primary-dark overflow-hidden">

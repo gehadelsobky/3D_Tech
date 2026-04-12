@@ -1,5 +1,6 @@
 import { useParams, Navigate } from 'react-router-dom';
 import { usePageContent } from '../context/PageContentContext';
+import SEO from '../components/SEO';
 
 export default function CustomPage() {
   const { slug } = useParams();
@@ -23,6 +24,10 @@ export default function CustomPage() {
 
   return (
     <main className="bg-surface min-h-screen">
+      <SEO
+        title={heroTitle || slug}
+        description={heroDescription?.slice(0, 160) || undefined}
+      />
       {/* Hero */}
       {heroTitle && (
         <div className="bg-white border-b border-gray-100">

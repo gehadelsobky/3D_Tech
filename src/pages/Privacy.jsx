@@ -12,7 +12,9 @@ export default function Privacy() {
     <main className="bg-surface min-h-screen">
       <SEO
         title="Privacy Policy"
+        titleAr="سياسة الخصوصية"
         description={`Privacy policy for ${company}. Learn how we collect, use, and protect your personal information.`}
+        descriptionAr={`سياسة الخصوصية لشركة ${company}. تعرف على كيفية جمع واستخدام وحماية معلوماتك الشخصية.`}
       />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h1 className="text-3xl font-bold text-text mb-8">{t('privacy.title')}</h1>

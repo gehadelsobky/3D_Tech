@@ -119,7 +119,9 @@ export default function Services() {
     <main className="bg-surface min-h-screen">
       <SEO
         title="Services"
+        titleAr="خدماتنا"
         description="3D printing services: engineering models, rapid prototyping, mechanical parts, graduation projects. Corporate gift solutions for every occasion."
+        descriptionAr="خدمات الطباعة ثلاثية الأبعاد: نماذج هندسية، نمذجة سريعة، قطع ميكانيكية، مشاريع تخرج. حلول هدايا الشركات لكل مناسبة."
       />
       {/* Hero */}
       <section className="bg-gradient-to-br from-accent-dark via-accent to-primary-dark">

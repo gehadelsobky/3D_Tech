@@ -111,7 +111,9 @@ export default function Contact() {
     <main className="bg-surface min-h-screen">
       <SEO
         title="Get a Quote"
+        titleAr="طلب عرض سعر"
         description="Contact 3D Tech for custom 3D printed products and corporate giveaways. Request a quote for your next project or event."
+        descriptionAr="تواصل مع 3D Tech للحصول على منتجات مطبوعة ثلاثية الأبعاد وهدايا شركات مخصصة. اطلب عرض سعر لمشروعك أو مناسبتك القادمة."
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">

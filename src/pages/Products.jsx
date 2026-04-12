@@ -62,7 +62,9 @@ export default function Products() {
     <main className="bg-surface min-h-screen">
       <SEO
         title="Products"
+        titleAr="المنتجات"
         description="Browse our collection of custom 3D printed promotional products, corporate giveaways, keychains, USB drives, desk accessories and more."
+        descriptionAr="تصفح مجموعتنا من المنتجات الترويجية المطبوعة بتقنية 3D، هدايا الشركات، سلاسل المفاتيح، الفلاشات، وإكسسوارات المكتب."
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}

@@ -40,7 +40,19 @@ export default function About() {
     <main className="bg-surface min-h-screen">
       <SEO
         title="About Us"
+        titleAr="من نحن"
         description="Learn about 3D Tech — Egypt's leading 3D printing company specializing in custom promotional products, engineering models, and corporate giveaways."
+        descriptionAr="تعرف على 3D Tech - الشركة الرائدة في مصر في الطباعة ثلاثية الأبعاد والمنتجات الترويجية المخصصة والنماذج الهندسية وهدايا الشركات."
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: '3D Tech',
+          description: 'Custom 3D printed promotional products, corporate giveaways, and engineering models in Egypt.',
+          url: window.location.origin,
+          logo: `${window.location.origin}/logo.jpeg`,
+          areaServed: 'EG',
+          knowsAbout: ['3D Printing', 'Corporate Gifts', 'Promotional Products', 'Engineering Models'],
+        }}
       />
       {/* Hero */}
       <section className="bg-white border-b border-gray-100">

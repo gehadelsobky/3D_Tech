@@ -44,7 +44,9 @@ export default function Blog() {
     <main className="bg-surface min-h-screen">
       <SEO
         title="Blog"
+        titleAr="المقالات"
         description="Read the latest articles, tips, and insights about 3D printing, corporate gifts, and promotional products."
+        descriptionAr="اقرأ أحدث المقالات والنصائح حول الطباعة ثلاثية الأبعاد وهدايا الشركات والمنتجات الترويجية."
       />
 
       {/* Hero */}

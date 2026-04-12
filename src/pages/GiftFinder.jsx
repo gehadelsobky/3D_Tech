@@ -155,7 +155,9 @@ export default function GiftFinder() {
     <main className="bg-surface min-h-screen">
       <SEO
         title="Gift Finder"
+        titleAr="اختيار الهدايا"
         description="Find the perfect corporate gift with our interactive Gift Finder. Filter by occasion, budget, audience, and quantity to discover ideal promotional products."
+        descriptionAr="اعثر على الهدية المثالية للشركات مع أداة اختيار الهدايا التفاعلية. فلتر حسب المناسبة والميزانية والجمهور والكمية."
       />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-10">
