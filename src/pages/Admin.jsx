@@ -7,6 +7,7 @@ import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '../lib/api';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
 import ImageUploader from '../components/ImageUploader';
+import AnalyticsCharts from '../components/AnalyticsCharts';
 
 // Download CSV helper
 function downloadCSV(endpoint, filename) {
@@ -1395,6 +1396,9 @@ export default function Admin() {
                     )}
                   </div>
                 </div>
+
+                {/* Analytics Charts */}
+                <AnalyticsCharts />
               </>
             ) : (
               <div className="text-center py-12 text-text-muted">Failed to load dashboard.</div>

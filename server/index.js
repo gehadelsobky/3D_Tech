@@ -154,6 +154,53 @@ app.get('/api/dashboard/stats', authenticate, (req, res) => {
   }
 });
 
+app.get('/api/dashboard/analytics', authenticate, (req, res) => {
+  try {
+    // Submissions per month (last 12 months)
+    const monthlySubmissions = db.prepare(`
+      SELECT strftime('%Y-%m', created_at) as month, COUNT(*) as count
+      FROM form_submissions
+      WHERE created_at >= date('now', '-12 months')
+      GROUP BY month ORDER BY month
+    `).all();
+
+    // Submissions by status
+    const statusBreakdown = db.prepare(`
+      SELECT status, COUNT(*) as count FROM form_submissions GROUP BY status
+    `).all();
+
+    // Submissions per form
+    const formPerformance = db.prepare(`
+      SELECT fd.name, COUNT(fs.id) as count
+      FROM form_submissions fs
+      JOIN form_definitions fd ON fs.form_id = fd.id
+      GROUP BY fd.name ORDER BY count DESC LIMIT 10
+    `).all();
+
+    // Submissions per week (last 8 weeks)
+    const weeklySubmissions = db.prepare(`
+      SELECT strftime('%Y-W%W', created_at) as week, COUNT(*) as count
+      FROM form_submissions
+      WHERE created_at >= date('now', '-8 weeks')
+      GROUP BY week ORDER BY week
+    `).all();
+
+    // Most viewed products (by how many times they appear in submissions)
+    const topProducts = db.prepare(`
+      SELECT p.name, p.id, COUNT(fs.id) as mentions
+      FROM products p
+      LEFT JOIN form_submissions fs ON json_extract(fs.data, '$.product') = p.name
+      GROUP BY p.id HAVING mentions > 0
+      ORDER BY mentions DESC LIMIT 5
+    `).all();
+
+    res.json({ monthlySubmissions, statusBreakdown, formPerformance, weeklySubmissions, topProducts });
+  } catch (err) {
+    console.error('Analytics error:', err.message);
+    res.status(500).json({ error: 'Failed to load analytics' });
+  }
+});
+
 // Sitemap.xml — dynamic generation
 app.get('/sitemap.xml', (req, res) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`;
