@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { apiGet } from '../lib/api';
 
-const COLORS = ['#3b82f6', '#eab308', '#22c55e', '#6b7280', '#ef4444', '#8b5cf6'];
+const COLORS = ['#5C92C9', '#E1222E', '#22c55e', '#6b7280', '#870B16', '#7FAED6'];
 
 const STATUS_LABELS = { new: 'New', reviewed: 'Reviewed', resolved: 'Resolved' };
 
@@ -53,7 +53,7 @@ export default function AnalyticsCharts() {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="count" fill="#dc2626" radius={[4, 4, 0, 0]} name="Submissions" />
+              <Bar dataKey="count" fill="#E1222E" radius={[4, 4, 0, 0]} name="Submissions" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -94,7 +94,7 @@ export default function AnalyticsCharts() {
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} name="Submissions" />
+              <Bar dataKey="count" fill="#5C92C9" radius={[0, 4, 4, 0]} name="Submissions" />
             </BarChart>
           </ResponsiveContainer>
         </div>

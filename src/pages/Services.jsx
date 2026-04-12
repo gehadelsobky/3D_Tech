@@ -124,15 +124,15 @@ export default function Services() {
         descriptionAr="خدمات الطباعة ثلاثية الأبعاد: نماذج هندسية، نمذجة سريعة، قطع ميكانيكية، مشاريع تخرج. حلول هدايا الشركات لكل مناسبة."
       />
       {/* Hero */}
-      <section className="bg-gradient-to-br from-accent-dark via-accent to-primary-dark">
+      <section className="bg-gradient-to-br from-accent-dark via-accent-dark to-primary-dark">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
           <div className="max-w-3xl">
-            <span className="inline-block px-3 py-1 bg-white/10 text-accent text-sm font-medium rounded-full mb-4 border border-white/10">
+            <span className="inline-block px-3 py-1 bg-white/15 text-accent-light text-sm font-medium rounded-full mb-4 border border-white/20">
               {c.heroBadge || 'What We Do'}
             </span>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
               {c.heroTitle1 || '3D Printing & Premium'}{' '}
-              <span className="text-accent">{c.heroTitle2 || 'Corporate Gifts'}</span>
+              <span className="text-accent-light">{c.heroTitle2 || 'Corporate Gifts'}</span>
             </h1>
             <p className="text-lg text-gray-300 leading-relaxed max-w-2xl">
               {c.heroDescription || 'At 3DTECH, we turn ideas into real products and help companies deliver customized corporate gifts that clearly and professionally represent their brand.'}

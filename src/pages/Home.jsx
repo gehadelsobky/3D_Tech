@@ -26,20 +26,20 @@ export default function Home() {
         descriptionAr="منتجات ترويجية مطبوعة بتقنية الطباعة ثلاثية الأبعاد، هدايا شركات مخصصة، ونماذج هندسية احترافية في مصر."
       />
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-accent-dark via-accent to-primary-dark overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+      <section className="relative bg-gradient-to-br from-accent-dark via-accent-dark to-primary-dark overflow-hidden">
+        <div className="absolute inset-0 opacity-15">
           <div className="absolute top-20 left-10 w-72 h-72 bg-accent rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-20 w-96 h-96 bg-primary rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-white/10 text-accent text-sm font-medium rounded-full mb-6 border border-white/10">
+            <span className="inline-block px-3 py-1 bg-white/15 text-accent-light text-sm font-medium rounded-full mb-6 border border-white/20">
               {c.heroBadge || '3D Printing & Corporate Gifts in Egypt'}
             </span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
               {c.heroTitle1 || '3D Printing & Premium'}
               <br />
-              <span className="text-accent">{c.heroTitle2 || 'Corporate Gifts'}</span>
+              <span className="text-accent-light">{c.heroTitle2 || 'Corporate Gifts'}</span>
             </h1>
             <p className="text-lg text-gray-300 mb-8 leading-relaxed max-w-lg">
               {c.heroDescription || 'At 3DTECH, we turn ideas into real products and help companies deliver customized corporate gifts that clearly and professionally represent their brand.'}
