@@ -28,7 +28,20 @@ const PORT = process.env.PORT || 3001;
 
 // Helmet — sets secure HTTP headers (CSP, HSTS, X-Frame-Options, etc.)
 app.use(helmet({
-  contentSecurityPolicy: false,       // disable CSP so inline styles/scripts from React work
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'self'", "https://www.youtube.com", "https://player.vimeo.com"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
   crossOriginEmbedderPolicy: false,   // allow loading external images
 }));
 
@@ -298,9 +311,13 @@ app.use((err, _req, res, _next) => {
   res.status(status).json({ error: message });
 });
 
-// ---------- JWT Secret Warning ----------
+// ---------- Security Warnings ----------
 if (!process.env.JWT_SECRET) {
-  console.warn('⚠️  WARNING: JWT_SECRET is not set. Using default secret — NOT SAFE for production!');
+  console.warn('⚠️  WARNING: JWT_SECRET is not set. A random secret was generated — tokens will not survive restarts!');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('🚨 CRITICAL: JWT_SECRET must be set in production. Exiting.');
+    process.exit(1);
+  }
 }
 
 app.listen(PORT, () => {

@@ -67,8 +67,8 @@ router.put('/password', authenticate, (req, res) => {
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Current password and new password are required' });
   }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
   }
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
@@ -80,7 +80,7 @@ router.put('/password', authenticate, (req, res) => {
     return res.status(401).json({ error: 'Current password is incorrect' });
   }
 
-  const hash = bcrypt.hashSync(newPassword, 10);
+  const hash = bcrypt.hashSync(newPassword, 12);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, req.user.id);
 
   res.json({ success: true });

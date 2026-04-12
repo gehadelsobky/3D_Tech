@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { useLanguage } from '../context/LanguageContext';
 import { useLocalizedBlogPost } from '../hooks/useLocalized';
 import SEO from '../components/SEO';
@@ -85,7 +86,7 @@ export default function BlogPost() {
         {/* Content */}
         <div
           className="prose prose-gray max-w-none text-text-muted leading-relaxed [&_h2]:text-text [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:text-text [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-3 [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:ps-6 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:ps-6 [&_li]:mb-2 [&_blockquote]:border-s-4 [&_blockquote]:border-primary [&_blockquote]:ps-4 [&_blockquote]:italic [&_blockquote]:text-text-muted [&_img]:rounded-lg [&_img]:my-6 [&_a]:text-primary [&_a]:underline"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ['iframe'], ADD_ATTR: ['target', 'allowfullscreen', 'frameborder'] }) }}
         />
 
         {/* Back to Blog */}

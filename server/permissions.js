@@ -17,6 +17,7 @@ export const ALL_PERMISSIONS = [
   'forms.edit',
   'forms.delete',
   'settings.smtp',
+  'settings.backup',
   'files.upload',
   'files.delete',
 ];
@@ -74,6 +75,7 @@ export const PERMISSION_GROUPS = [
     label: 'Settings',
     permissions: [
       { key: 'settings.smtp', label: 'SMTP Configuration' },
+      { key: 'settings.backup', label: 'Backup & Restore' },
     ],
   },
   {

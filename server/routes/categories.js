@@ -1,14 +1,19 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import db from '../db.js';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate, requirePermission, JWT_SECRET } from '../middleware/auth.js';
 
 const router = Router();
 
 // GET /api/categories — list all categories (public: active only, admin: all)
 router.get('/', (req, res) => {
+  let isAdmin = false;
   const token = req.headers.authorization?.split(' ')[1];
-  let rows;
   if (token) {
+    try { jwt.verify(token, JWT_SECRET); isAdmin = true; } catch { /* invalid token — treat as public */ }
+  }
+  let rows;
+  if (isAdmin) {
     rows = db.prepare('SELECT * FROM categories ORDER BY sort_order ASC, name ASC').all();
   } else {
     rows = db.prepare('SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, name ASC').all();

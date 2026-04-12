@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { ALL_PERMISSIONS } from './permissions.js';
@@ -178,6 +179,18 @@ export function initDb() {
     db.exec("ALTER TABLE blog_posts ADD COLUMN content_ar TEXT NOT NULL DEFAULT ''");
   }
 
+  // ---- Performance indexes ----
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_form_submissions_form_id ON form_submissions(form_id);
+    CREATE INDEX IF NOT EXISTS idx_form_submissions_status ON form_submissions(status);
+    CREATE INDEX IF NOT EXISTS idx_form_submissions_created ON form_submissions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
+    CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
+    CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+    CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
+    CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+  `);
+
   // ---- Seed default roles ----
   const roleCount = db.prepare('SELECT COUNT(*) as count FROM roles').get();
   if (roleCount.count === 0) {
@@ -198,9 +211,16 @@ export function initDb() {
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount.count === 0) {
     const superAdminRole = db.prepare("SELECT id FROM roles WHERE slug = 'super_admin'").get();
-    const hash = bcrypt.hashSync('admin123', 10);
+    // Generate a secure random password for the default admin
+    const defaultPassword = crypto.randomBytes(16).toString('base64url');
+    const hash = bcrypt.hashSync(defaultPassword, 12);
     db.prepare('INSERT INTO users (username, password_hash, role, role_id) VALUES (?, ?, ?, ?)').run('admin', hash, 'super_admin', superAdminRole.id);
-    console.log('Default super admin user created (username: admin, password: admin123)');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('  Default super admin user created');
+    console.log(`  Username: admin`);
+    console.log(`  Password: ${defaultPassword}`);
+    console.log('  ⚠️  SAVE THIS PASSWORD — it will NOT be shown again!');
+    console.log('═══════════════════════════════════════════════════');
   }
 
   // ---- Seed categories ----

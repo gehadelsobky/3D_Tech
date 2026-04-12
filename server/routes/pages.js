@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
-import { authenticate, requirePermission } from '../middleware/auth.js';
-
-const JWT_SECRET = process.env.JWT_SECRET || '3dtech_jwt_secret_key_2024';
+import { authenticate, requirePermission, JWT_SECRET } from '../middleware/auth.js';
 
 const router = Router();
 

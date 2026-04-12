@@ -25,8 +25,8 @@ router.post('/', authenticate, requirePermission('users.create'), (req, res) => 
   if (username.length < 3) {
     return res.status(400).json({ error: 'Username must be at least 3 characters' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
   // Validate role
@@ -51,7 +51,7 @@ router.post('/', authenticate, requirePermission('users.create'), (req, res) => 
     }
   }
 
-  const hash = bcrypt.hashSync(password, 10);
+  const hash = bcrypt.hashSync(password, 12);
   const result = db.prepare('INSERT INTO users (username, email, password_hash, role_id, role) VALUES (?, ?, ?, ?, ?)').run(
     username, email || null, hash, role_id, role.slug
   );
@@ -104,14 +104,14 @@ router.put('/:id', authenticate, requirePermission('users.edit'), (req, res) => 
     }
   }
 
-  if (password && password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (password && password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
   const newUsername = username || user.username;
   const newEmail = email !== undefined ? (email || null) : user.email;
   const newRoleId = role_id || user.role_id;
-  const newHash = password ? bcrypt.hashSync(password, 10) : user.password_hash;
+  const newHash = password ? bcrypt.hashSync(password, 12) : user.password_hash;
   const newRole = db.prepare('SELECT * FROM roles WHERE id = ?').get(newRoleId);
 
   db.prepare('UPDATE users SET username = ?, email = ?, password_hash = ?, role_id = ?, role = ? WHERE id = ?').run(

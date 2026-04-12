@@ -1,14 +1,21 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import db from '../db.js';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate, requirePermission, JWT_SECRET } from '../middleware/auth.js';
 
 const router = Router();
 
+// Helper: verify JWT token for mixed public/admin routes
+function isAuthenticated(req) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return false;
+  try { jwt.verify(token, JWT_SECRET); return true; } catch { return false; }
+}
+
 // GET /api/blog — public: published only, admin: all
 router.get('/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
   let rows;
-  if (token) {
+  if (isAuthenticated(req)) {
     rows = db.prepare('SELECT * FROM blog_posts ORDER BY created_at DESC').all();
   } else {
     rows = db.prepare("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC").all();
@@ -18,9 +25,8 @@ router.get('/', (req, res) => {
 
 // GET /api/blog/:slug — get single post by slug (public: published only)
 router.get('/:slug', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
   let row;
-  if (token) {
+  if (isAuthenticated(req)) {
     row = db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(req.params.slug);
   } else {
     row = db.prepare("SELECT * FROM blog_posts WHERE slug = ? AND status = 'published'").get(req.params.slug);

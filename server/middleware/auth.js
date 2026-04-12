@@ -1,9 +1,11 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import db from '../db.js';
 import { ALL_PERMISSIONS } from '../permissions.js';
 
-export const JWT_SECRET = process.env.JWT_SECRET || '3dtech_jwt_secret_key_2024';
-// In production, JWT_SECRET MUST be set as an environment variable
+// JWT_SECRET must be set via environment variable in production.
+// In development, a random secret is generated per process (tokens won't survive restarts).
+export const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
 export function authenticate(req, res, next) {
   const header = req.headers.authorization;
@@ -14,6 +16,12 @@ export function authenticate(req, res, next) {
   const token = header.slice(7);
   try {
     const payload = jwt.verify(token, JWT_SECRET);
+
+    // Verify user still exists in database (handles deleted users with active tokens)
+    const userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(payload.id);
+    if (!userExists) {
+      return res.status(401).json({ error: 'User no longer exists' });
+    }
 
     // Enrich with current role + permissions from DB
     const role = db.prepare('SELECT * FROM roles WHERE id = ?').get(payload.role_id);

@@ -1,17 +1,29 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import db from '../db.js';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate, requirePermission, JWT_SECRET } from '../middleware/auth.js';
 import { sendFormNotification, sendConfirmationEmail } from '../email.js';
 
 const router = Router();
+
+// Helper: check if request has a valid admin token (without blocking public access)
+function isAuthenticated(req) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return false;
+  try {
+    jwt.verify(token, JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // ==================== FORM DEFINITIONS ====================
 
 // GET /api/forms — list all forms (public: only active, admin: all)
 router.get('/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
   let rows;
-  if (token) {
+  if (isAuthenticated(req)) {
     // Admin sees all forms
     rows = db.prepare(`
       SELECT f.*, (SELECT COUNT(*) FROM form_submissions WHERE form_id = f.id) as submission_count
@@ -102,11 +114,12 @@ router.post('/:slug/submit', (req, res) => {
   // Send email notifications (fire and forget)
   sendFormNotification(form.name, data).catch(() => {});
 
-  // Send confirmation email to user if email field exists
+  // Send confirmation email to user if a valid email field exists
   const emailField = data.email || data.Email || data.e_mail;
-  if (emailField) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (emailField && emailRegex.test(String(emailField).trim())) {
     const nameField = data.name || data.Name || data.full_name || '';
-    sendConfirmationEmail(emailField, nameField, form.name).catch(() => {});
+    sendConfirmationEmail(String(emailField).trim(), nameField, form.name).catch(() => {});
   }
 
   res.status(201).json({ success: true });
@@ -115,8 +128,8 @@ router.post('/:slug/submit', (req, res) => {
 // GET /api/forms/:id/submissions — list submissions for a form (admin)
 router.get('/:id/submissions', authenticate, requirePermission('forms.view'), (req, res) => {
   const { id } = req.params;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
   const offset = (page - 1) * limit;
   const status = req.query.status;
 
