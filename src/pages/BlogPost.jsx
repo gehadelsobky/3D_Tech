@@ -65,7 +65,7 @@ export default function BlogPost() {
         {/* Cover Image */}
         {post.cover_image && (
           <div className="aspect-[16/9] rounded-xl overflow-hidden mb-8">
-            <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
+            <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
           </div>
         )}
 

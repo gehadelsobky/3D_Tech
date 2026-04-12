@@ -71,6 +71,7 @@ export default function ProductDetail() {
                 src={product.images[activeImage]}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
             </div>
             {product.images.length > 1 && (
