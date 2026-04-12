@@ -2,25 +2,40 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useLocalizedBlogPosts } from '../hooks/useLocalized';
+import { BlogGridSkeleton } from '../components/Skeleton';
+import FetchError from '../components/FetchError';
 import SEO from '../components/SEO';
 
 export default function Blog() {
   const [rawPosts, setRawPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { t } = useLanguage();
   const posts = useLocalizedBlogPosts(rawPosts);
 
-  useEffect(() => {
+  const fetchPosts = () => {
+    setLoading(true);
+    setError(false);
     fetch('/api/blog')
       .then(r => r.json())
       .then(data => { setRawPosts(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => { setError(true); setLoading(false); });
+  };
+
+  useEffect(() => { fetchPosts(); }, []);
 
   if (loading) {
     return (
-      <main className="bg-surface min-h-screen flex items-center justify-center">
-        <div className="text-text-muted">{t('common.loading')}</div>
+      <main className="bg-surface min-h-screen">
+        <section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 className="text-4xl font-bold mb-3">{t('blog.title')}</h1>
+            <p className="text-gray-300 max-w-xl mx-auto">{t('blog.subtitle')}</p>
+          </div>
+        </section>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <BlogGridSkeleton count={3} />
+        </div>
       </main>
     );
   }
@@ -41,7 +56,9 @@ export default function Blog() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {posts.length === 0 ? (
+        {error ? (
+          <FetchError onRetry={fetchPosts} />
+        ) : posts.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">&#128221;</div>
             <h2 className="text-xl font-semibold text-text mb-2">{t('blog.noArticles')}</h2>

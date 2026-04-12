@@ -6,6 +6,8 @@ import { useCategories } from '../context/CategoryContext';
 import { useLocalizedProducts, useLocalizedCategories } from '../hooks/useLocalized';
 import { useLanguage } from '../context/LanguageContext';
 import ProductCard from '../components/ProductCard';
+import { ProductGridSkeleton } from '../components/Skeleton';
+import FetchError from '../components/FetchError';
 import SEO from '../components/SEO';
 
 function useDebounce(value, delay) {
@@ -18,7 +20,7 @@ function useDebounce(value, delay) {
 }
 
 export default function Products() {
-  const { products: rawProducts, loading } = useProducts();
+  const { products: rawProducts, loading, error, retry } = useProducts();
   const { content: c } = usePageContent('products');
   const { categories: rawCategories } = useCategories();
   const products = useLocalizedProducts(rawProducts);
@@ -122,7 +124,9 @@ export default function Products() {
 
         {/* Results */}
         {loading ? (
-          <div className="text-center py-20 text-text-muted">{t('common.loading')}</div>
+          <ProductGridSkeleton count={8} />
+        ) : error ? (
+          <FetchError onRetry={retry} />
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filtered.map((product) => (

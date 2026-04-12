@@ -5,10 +5,12 @@ import { useCategories } from '../context/CategoryContext';
 import { useLocalizedProducts, useLocalizedCategories } from '../hooks/useLocalized';
 import { useLanguage } from '../context/LanguageContext';
 import ProductCard from '../components/ProductCard';
+import { ProductGridSkeleton } from '../components/Skeleton';
+import FetchError from '../components/FetchError';
 import SEO from '../components/SEO';
 
 export default function Home() {
-  const { products: rawProducts, loading } = useProducts();
+  const { products: rawProducts, loading, error, retry } = useProducts();
   const { content: c } = usePageContent('home');
   const { categories: rawCategories } = useCategories();
   const products = useLocalizedProducts(rawProducts);
@@ -120,7 +122,9 @@ export default function Home() {
             </Link>
           </div>
           {loading ? (
-            <div className="text-center py-12 text-text-muted">{t('common.loading')}</div>
+            <ProductGridSkeleton count={4} />
+          ) : error ? (
+            <FetchError onRetry={retry} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featured.map((product) => (

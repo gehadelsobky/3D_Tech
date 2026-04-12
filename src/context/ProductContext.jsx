@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost, apiPut, apiDelete } from '../lib/api';
 
 const ProductContext = createContext();
@@ -6,13 +6,18 @@ const ProductContext = createContext();
 export function ProductProvider({ children }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchProducts = useCallback(() => {
+    setLoading(true);
+    setError(false);
     apiGet('/products')
       .then(setProducts)
-      .catch(console.error)
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const addProduct = async (data) => {
     const created = await apiPost('/products', data);
@@ -32,7 +37,7 @@ export function ProductProvider({ children }) {
   };
 
   return (
-    <ProductContext.Provider value={{ products, loading, addProduct, updateProduct, deleteProduct }}>
+    <ProductContext.Provider value={{ products, loading, error, retry: fetchProducts, addProduct, updateProduct, deleteProduct }}>
       {children}
     </ProductContext.Provider>
   );
