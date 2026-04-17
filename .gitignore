@@ -33,9 +33,4 @@ dist-ssr
 *.sw?
 .claude/
 
-*.db
-server/*.db
-tmp/
-.htaccess
-.env
-logs/
+
