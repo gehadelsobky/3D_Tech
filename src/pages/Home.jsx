@@ -26,38 +26,63 @@ export default function Home() {
         descriptionAr="منتجات ترويجية مطبوعة بتقنية الطباعة ثلاثية الأبعاد، هدايا شركات مخصصة، ونماذج هندسية احترافية في مصر."
       />
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-accent-dark via-accent-dark to-primary-dark overflow-hidden">
-        <div className="absolute inset-0 opacity-15">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-accent rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-20 w-96 h-96 bg-primary rounded-full blur-3xl" />
+      <section className="relative bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0a1628] overflow-hidden">
+        {/* Background glows */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-blue-700/20 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-red-700/20 rounded-full blur-[120px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px]" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
-          <div className="max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-white/15 text-accent-light text-sm font-medium rounded-full mb-6 border border-white/20">
-              {c.heroBadge || '3D Printing & Corporate Gifts in Egypt'}
-            </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-              {c.heroTitle1 || '3D Printing & Premium'}
-              <br />
-              <span className="text-accent-light">{c.heroTitle2 || 'Corporate Gifts'}</span>
-            </h1>
-            <p className="text-lg text-gray-300 mb-8 leading-relaxed max-w-lg">
-              {c.heroDescription || 'At 3DTECH, we turn ideas into real products and help companies deliver customized corporate gifts that clearly and professionally represent their brand.'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                to="/products"
-                className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors no-underline"
-              >
-                {c.heroCta1 || 'Browse Products'}
-              </Link>
-              <Link
-                to="/gift-finder"
-                className="inline-flex items-center justify-center px-6 py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors no-underline border border-white/20"
-              >
-                {c.heroCta2 || 'Find the Perfect Gift'}
-              </Link>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+
+            {/* Left — Text */}
+            <div>
+              <span className="inline-block px-3 py-1 bg-white/10 text-blue-200 text-sm font-medium rounded-full mb-6 border border-white/15">
+                {c.heroBadge || '3D Printing & Corporate Gifts in Egypt'}
+              </span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
+                {c.heroTitle1 || '3D Printing & Premium'}
+                <br />
+                <span className="text-accent-light">{c.heroTitle2 || 'Corporate Gifts'}</span>
+              </h1>
+              <p className="text-lg text-gray-300 mb-8 leading-relaxed max-w-lg">
+                {c.heroDescription || 'At 3DTECH, we turn ideas into real products and help companies deliver customized corporate gifts that clearly and professionally represent their brand.'}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  to="/products"
+                  className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors no-underline"
+                >
+                  {c.heroCta1 || 'Browse Products'}
+                </Link>
+                <Link
+                  to="/gift-finder"
+                  className="inline-flex items-center justify-center px-6 py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors no-underline border border-white/20"
+                >
+                  {c.heroCta2 || 'Find the Perfect Gift'}
+                </Link>
+              </div>
             </div>
+
+            {/* Right — Video */}
+            <div className="flex items-center justify-center">
+              <div className="relative w-full max-w-lg">
+                {/* Glow ring behind video */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/30 via-transparent to-red-600/30 blur-2xl scale-105" />
+                <video
+                  src="/3d_logo.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="relative w-full rounded-2xl shadow-2xl"
+                  style={{ aspectRatio: '1/1', objectFit: 'cover' }}
+                />
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
