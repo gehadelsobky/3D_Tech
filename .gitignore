@@ -32,3 +32,10 @@ dist-ssr
 *.sln
 *.sw?
 .claude/
+
+*.db
+server/*.db
+tmp/
+.htaccess
+.env
+logs/
