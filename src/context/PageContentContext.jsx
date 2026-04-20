@@ -77,14 +77,18 @@ function localizeContent(content, lang) {
             if (!arItem || typeof arItem !== 'object') return enItem;
             const obj = { ...enItem };
             for (const [f, v] of Object.entries(arItem)) {
-              if (typeof v === 'string' && v.trim()) {
-                // string field → override
+              const enField = enItem[f];
+              if (Array.isArray(enField)) {
+                // English field is an array — only accept array override, never string
+                if (Array.isArray(v) && v.length > 0) {
+                  obj[f] = enField.map((enPt, j) =>
+                    (typeof v[j] === 'string' && v[j].trim()) ? v[j] : enPt
+                  );
+                }
+                // if v is a string (admin mistake), skip → keep English array
+              } else if (typeof v === 'string' && v.trim()) {
+                // normal string field → override
                 obj[f] = v;
-              } else if (Array.isArray(v) && v.length > 0) {
-                // nested string array (e.g. points) → override non-empty items
-                obj[f] = (enItem[f] || []).map((enPt, j) =>
-                  (typeof v[j] === 'string' && v[j].trim()) ? v[j] : enPt
-                );
               }
             }
             return obj;

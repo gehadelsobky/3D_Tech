@@ -2344,28 +2344,62 @@ export default function Admin() {
                         </div>
                       );
                     }
-                    // Array of objects
+                    // Array of objects (e.g. printingServices, giftServices)
                     if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
                       const fields = Object.keys(value[0]);
-                      const arArr = arValue || value.map(() => Object.fromEntries(fields.map(f => [f, ''])));
+                      const arArr = arValue || value.map((item) =>
+                        Object.fromEntries(fields.map(f => [f, Array.isArray(item[f]) ? item[f].map(() => '') : '']))
+                      );
                       return (
                         <div key={key}>
                           <label className="block text-xs font-medium text-text-muted mb-2">{key}</label>
                           {value.map((item, i) => (
-                            <div key={i} className="mb-2 p-3 bg-surface rounded-lg">
+                            <div key={i} className="mb-3 p-3 bg-surface rounded-lg border border-gray-100">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {fields.map((f) => (
-                                  <div key={f}>
-                                    <label className="block text-[10px] text-text-muted mb-0.5">{f} <span className="text-gray-400">({(item[f] || '').slice(0, 25)}...)</span></label>
-                                    <input type="text" value={arArr[i]?.[f] || ''} onChange={(e) => {
-                                      setPageFormAr(prev => {
-                                        const arr = [...(prev?.[key] || value.map(() => Object.fromEntries(fields.map(ff => [ff, '']))))];
-                                        arr[i] = { ...(arr[i] || {}), [f]: e.target.value };
-                                        return { ...prev, [key]: arr };
-                                      });
-                                    }} className={'w-full ' + inputClass + ' text-xs'} placeholder="بالعربي" />
-                                  </div>
-                                ))}
+                                {fields.map((f) => {
+                                  const enVal = item[f];
+                                  const arVal = arArr[i]?.[f];
+                                  // nested array field (e.g. points)
+                                  if (Array.isArray(enVal)) {
+                                    const arPoints = Array.isArray(arVal) ? arVal : enVal.map(() => '');
+                                    return (
+                                      <div key={f} className="sm:col-span-2">
+                                        <label className="block text-[10px] text-text-muted mb-1">{f}</label>
+                                        {enVal.map((pt, j) => (
+                                          <div key={j} className="flex gap-2 mb-1 items-center">
+                                            <span className="text-[9px] text-gray-400 shrink-0 max-w-28 truncate" title={pt}>{pt}</span>
+                                            <input type="text" value={arPoints[j] || ''} onChange={(e) => {
+                                              setPageFormAr(prev => {
+                                                const arr = [...(prev?.[key] || value.map((it) =>
+                                                  Object.fromEntries(Object.keys(it).map(ff => [ff, Array.isArray(it[ff]) ? it[ff].map(() => '') : '']))
+                                                ))];
+                                                const pts = Array.isArray(arr[i]?.[f]) ? [...arr[i][f]] : enVal.map(() => '');
+                                                pts[j] = e.target.value;
+                                                arr[i] = { ...(arr[i] || {}), [f]: pts };
+                                                return { ...prev, [key]: arr };
+                                              });
+                                            }} className={'flex-1 ' + inputClass + ' text-xs'} placeholder="بالعربي" />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  }
+                                  // normal string field
+                                  return (
+                                    <div key={f}>
+                                      <label className="block text-[10px] text-text-muted mb-0.5">{f} <span className="text-gray-400">({String(enVal || '').slice(0, 20)}...)</span></label>
+                                      <input type="text" value={typeof arVal === 'string' ? arVal : ''} onChange={(e) => {
+                                        setPageFormAr(prev => {
+                                          const arr = [...(prev?.[key] || value.map((it) =>
+                                            Object.fromEntries(Object.keys(it).map(ff => [ff, Array.isArray(it[ff]) ? it[ff].map(() => '') : '']))
+                                          ))];
+                                          arr[i] = { ...(arr[i] || {}), [f]: e.target.value };
+                                          return { ...prev, [key]: arr };
+                                        });
+                                      }} className={'w-full ' + inputClass + ' text-xs'} placeholder="بالعربي" />
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           ))}
