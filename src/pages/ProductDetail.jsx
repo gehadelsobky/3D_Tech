@@ -30,7 +30,11 @@ export default function ProductDetail() {
       .slice(0, 4);
   }, [products, product]);
 
-  const images = product.images ? JSON.parse(product.images) : (product.image ? [product.image] : []);
+  const images = Array.isArray(product.images)
+    ? product.images
+    : (typeof product.images === 'string' && product.images
+        ? JSON.parse(product.images)
+        : (product.image ? [product.image] : []));
   const productStructuredData = useMemo(() => ({
     '@context': 'https://schema.org',
     '@type': 'Product',
