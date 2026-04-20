@@ -54,31 +54,50 @@ export function PageContentProvider({ children }) {
 // Helper: merge English content with Arabic overrides based on current language
 function localizeContent(content, lang) {
   if (!content || lang !== 'ar') return content;
-  const { _ar, ...en } = content;
-  if (!_ar || typeof _ar !== 'object') return en;
+  try {
+    const { _ar, ...en } = content;
+    if (!_ar || typeof _ar !== 'object') return en;
 
-  const merged = { ...en };
-  for (const [key, arVal] of Object.entries(_ar)) {
-    if (!arVal) continue; // skip empty values — fallback to English
-    if (typeof arVal === 'string' && arVal.trim()) {
-      merged[key] = arVal;
-    } else if (Array.isArray(arVal) && arVal.length > 0) {
-      // For arrays, replace only non-empty items
-      if (typeof arVal[0] === 'string') {
-        merged[key] = (en[key] || []).map((enItem, i) => arVal[i]?.trim() ? arVal[i] : enItem);
-      } else if (typeof arVal[0] === 'object') {
-        merged[key] = (en[key] || []).map((enItem, i) => {
-          if (!arVal[i]) return enItem;
-          const obj = { ...enItem };
-          for (const [f, v] of Object.entries(arVal[i])) {
-            if (v && typeof v === 'string' && v.trim()) obj[f] = v;
-          }
-          return obj;
-        });
+    const merged = { ...en };
+    for (const [key, arVal] of Object.entries(_ar)) {
+      if (!arVal) continue; // skip empty values — fallback to English
+      if (typeof arVal === 'string' && arVal.trim()) {
+        merged[key] = arVal;
+      } else if (Array.isArray(arVal) && arVal.length > 0) {
+        const firstItem = arVal[0];
+        // Array of strings
+        if (typeof firstItem === 'string') {
+          merged[key] = (en[key] || []).map((enItem, i) =>
+            (typeof arVal[i] === 'string' && arVal[i].trim()) ? arVal[i] : enItem
+          );
+        // Array of objects (e.g. services, stats)
+        } else if (firstItem && typeof firstItem === 'object') {
+          merged[key] = (en[key] || []).map((enItem, i) => {
+            const arItem = arVal[i];
+            if (!arItem || typeof arItem !== 'object') return enItem;
+            const obj = { ...enItem };
+            for (const [f, v] of Object.entries(arItem)) {
+              if (typeof v === 'string' && v.trim()) {
+                // string field → override
+                obj[f] = v;
+              } else if (Array.isArray(v) && v.length > 0) {
+                // nested string array (e.g. points) → override non-empty items
+                obj[f] = (enItem[f] || []).map((enPt, j) =>
+                  (typeof v[j] === 'string' && v[j].trim()) ? v[j] : enPt
+                );
+              }
+            }
+            return obj;
+          });
+        }
       }
     }
+    return merged;
+  } catch {
+    // on any error, return English content
+    const { _ar: _ignored, ...en } = content;
+    return en;
   }
-  return merged;
 }
 
 export function usePageContent(slug) {
