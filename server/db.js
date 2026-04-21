@@ -299,7 +299,7 @@ export function initDb() {
   }
 
   // ---- Migration: insert privacy page if missing ----
-  const privacyExists = db.prepare("SELECT id FROM page_content WHERE slug = 'privacy'").get();
+  const privacyExists = db.prepare("SELECT slug FROM page_content WHERE slug = 'privacy'").get();
   if (!privacyExists) {
     const privacyContent = {
       lastUpdated: 'February 2026',
