@@ -301,7 +301,7 @@ export function initDb() {
   // ---- Migration: insert privacy page if missing ----
   const privacyExists = db.prepare("SELECT slug FROM page_content WHERE slug = 'privacy'").get();
   if (!privacyExists) {
-    const privacyContent = {
+    const privacyEn = {
       lastUpdated: 'February 2026',
       sections: [
         { title: '1. Information We Collect', content: 'When you submit a quote request or contact us, we collect personal information such as your name, email address, phone number, and company name. We also collect information about your project requirements including product preferences, quantity, and budget.' },
@@ -312,23 +312,23 @@ export function initDb() {
         { title: '6. Your Rights', content: 'You have the right to access, correct, or delete your personal information at any time. To exercise these rights, please contact us.' },
         { title: '7. Contact', content: 'If you have questions about this privacy policy, please contact us via email or phone.' },
       ],
-      _ar: {
-        lastUpdated: 'فبراير 2026',
-        sections: [
-          { title: '١. المعلومات التي نجمعها', content: 'عندما تقدم طلب عرض سعر أو تتواصل معنا، نجمع معلومات شخصية مثل اسمك وعنوان بريدك الإلكتروني ورقم هاتفك واسم شركتك. كما نجمع معلومات حول متطلبات مشروعك بما في ذلك تفضيلات المنتج والكمية والميزانية.' },
-          { title: '٢. كيف نستخدم معلوماتك', content: 'نستخدم المعلومات التي تقدمها للرد على استفساراتك وطلبات عروض الأسعار، وتقديم منتجاتنا وخدماتنا وتحسينها، والتواصل معك بشأن طلباتك ومشاريعك، وإرسال اتصالات تسويقية ذات صلة (بموافقتك).' },
-          { title: '٣. مشاركة البيانات', content: 'لا نبيع معلوماتك الشخصية أو نتاجر بها أو نؤجرها لأطراف ثالثة. قد نشارك بياناتك مع مزودي الخدمة الموثوق بهم الذين يساعدوننا في تشغيل أعمالنا، شريطة موافقتهم على الحفاظ على سرية هذه المعلومات.' },
-          { title: '٤. أمان البيانات', content: 'نطبق تدابير تقنية وتنظيمية مناسبة لحماية بياناتك الشخصية من الوصول غير المصرح به أو التعديل أو الإفصاح أو الإتلاف.' },
-          { title: '٥. ملفات تعريف الارتباط', content: 'قد يستخدم موقعنا ملفات تعريف الارتباط لتحسين تجربة التصفح. يمكنك اختيار تعطيل ملفات تعريف الارتباط من خلال إعدادات المتصفح، وإن كان ذلك قد يؤثر على بعض الوظائف.' },
-          { title: '٦. حقوقك', content: 'يحق لك الوصول إلى معلوماتك الشخصية أو تصحيحها أو حذفها في أي وقت. لممارسة هذه الحقوق، يرجى التواصل معنا.' },
-          { title: '٧. التواصل', content: 'إذا كان لديك أسئلة حول سياسة الخصوصية هذه، يرجى التواصل معنا عبر البريد الإلكتروني أو الهاتف.' },
-        ],
-      },
     };
-    db.prepare("INSERT INTO page_content (slug, title, content) VALUES (?, ?, ?)").run(
-      'privacy', 'Privacy Policy', JSON.stringify(privacyContent)
+    const privacyAr = {
+      lastUpdated: 'فبراير 2026',
+      sections: [
+        { title: '١. المعلومات التي نجمعها', content: 'عندما تقدم طلب عرض سعر أو تتواصل معنا، نجمع معلومات شخصية مثل اسمك وعنوان بريدك الإلكتروني ورقم هاتفك واسم شركتك. كما نجمع معلومات حول متطلبات مشروعك بما في ذلك تفضيلات المنتج والكمية والميزانية.' },
+        { title: '٢. كيف نستخدم معلوماتك', content: 'نستخدم المعلومات التي تقدمها للرد على استفساراتك وطلبات عروض الأسعار، وتقديم منتجاتنا وخدماتنا وتحسينها، والتواصل معك بشأن طلباتك ومشاريعك، وإرسال اتصالات تسويقية ذات صلة (بموافقتك).' },
+        { title: '٣. مشاركة البيانات', content: 'لا نبيع معلوماتك الشخصية أو نتاجر بها أو نؤجرها لأطراف ثالثة. قد نشارك بياناتك مع مزودي الخدمة الموثوق بهم الذين يساعدوننا في تشغيل أعمالنا، شريطة موافقتهم على الحفاظ على سرية هذه المعلومات.' },
+        { title: '٤. أمان البيانات', content: 'نطبق تدابير تقنية وتنظيمية مناسبة لحماية بياناتك الشخصية من الوصول غير المصرح به أو التعديل أو الإفصاح أو الإتلاف.' },
+        { title: '٥. ملفات تعريف الارتباط', content: 'قد يستخدم موقعنا ملفات تعريف الارتباط لتحسين تجربة التصفح. يمكنك اختيار تعطيل ملفات تعريف الارتباط من خلال إعدادات المتصفح، وإن كان ذلك قد يؤثر على بعض الوظائف.' },
+        { title: '٦. حقوقك', content: 'يحق لك الوصول إلى معلوماتك الشخصية أو تصحيحها أو حذفها في أي وقت. لممارسة هذه الحقوق، يرجى التواصل معنا.' },
+        { title: '٧. التواصل', content: 'إذا كان لديك أسئلة حول سياسة الخصوصية هذه، يرجى التواصل معنا عبر البريد الإلكتروني أو الهاتف.' },
+      ],
+    };
+    db.prepare("INSERT INTO page_content (slug, title, content, content_ar) VALUES (?, ?, ?, ?)").run(
+      'privacy', 'Privacy Policy', JSON.stringify(privacyEn), JSON.stringify(privacyAr)
     );
-    console.log('Inserted privacy page content');
+    console.log('Inserted privacy page content (EN + AR)');
   }
 }
 
