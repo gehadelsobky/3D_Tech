@@ -228,7 +228,7 @@ export default function Admin() {
   const [newPageSlug, setNewPageSlug] = useState('');
   const [newPageCreating, setNewPageCreating] = useState(false);
 
-  const CORE_PAGES = ['global', 'home', 'about', 'contact', 'products'];
+  const CORE_PAGES = ['global', 'home', 'about', 'contact', 'products', 'privacy'];
 
   const PAGE_LABELS = {
     global: 'Global Settings (Contact Info, Company)',
@@ -236,6 +236,7 @@ export default function Admin() {
     about: 'About Page',
     contact: 'Contact Page',
     products: 'Products Page',
+    privacy: 'Privacy Policy Page',
   };
 
   useEffect(() => {

@@ -76,7 +76,7 @@ export default function App() {
                   <Route path="/services" element={<PageRoute slug="services"><Services /></PageRoute>} />
                   <Route path="/about" element={<PageRoute slug="about"><About /></PageRoute>} />
                   <Route path="/contact" element={<PageRoute slug="contact"><Contact /></PageRoute>} />
-                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/privacy" element={<PageRoute slug="privacy"><Privacy /></PageRoute>} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />
                   <Route path="/login" element={<Login />} />

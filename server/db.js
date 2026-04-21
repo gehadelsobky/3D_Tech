@@ -297,6 +297,39 @@ export function initDb() {
     seedForms();
     console.log('Seeded default forms');
   }
+
+  // ---- Migration: insert privacy page if missing ----
+  const privacyExists = db.prepare("SELECT id FROM page_content WHERE slug = 'privacy'").get();
+  if (!privacyExists) {
+    const privacyContent = {
+      lastUpdated: 'February 2026',
+      sections: [
+        { title: '1. Information We Collect', content: 'When you submit a quote request or contact us, we collect personal information such as your name, email address, phone number, and company name. We also collect information about your project requirements including product preferences, quantity, and budget.' },
+        { title: '2. How We Use Your Information', content: 'We use the information you provide to respond to your inquiries and quote requests, provide and improve our products and services, communicate with you about your orders and projects, and send relevant marketing communications (with your consent).' },
+        { title: '3. Data Sharing', content: 'We do not sell, trade, or rent your personal information to third parties. We may share your data with trusted service providers who assist us in operating our business, provided they agree to keep this information confidential.' },
+        { title: '4. Data Security', content: 'We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction.' },
+        { title: '5. Cookies', content: 'Our website may use cookies to enhance your browsing experience. You can choose to disable cookies through your browser settings, though this may affect some functionality.' },
+        { title: '6. Your Rights', content: 'You have the right to access, correct, or delete your personal information at any time. To exercise these rights, please contact us.' },
+        { title: '7. Contact', content: 'If you have questions about this privacy policy, please contact us via email or phone.' },
+      ],
+      _ar: {
+        lastUpdated: 'فبراير 2026',
+        sections: [
+          { title: '١. المعلومات التي نجمعها', content: 'عندما تقدم طلب عرض سعر أو تتواصل معنا، نجمع معلومات شخصية مثل اسمك وعنوان بريدك الإلكتروني ورقم هاتفك واسم شركتك. كما نجمع معلومات حول متطلبات مشروعك بما في ذلك تفضيلات المنتج والكمية والميزانية.' },
+          { title: '٢. كيف نستخدم معلوماتك', content: 'نستخدم المعلومات التي تقدمها للرد على استفساراتك وطلبات عروض الأسعار، وتقديم منتجاتنا وخدماتنا وتحسينها، والتواصل معك بشأن طلباتك ومشاريعك، وإرسال اتصالات تسويقية ذات صلة (بموافقتك).' },
+          { title: '٣. مشاركة البيانات', content: 'لا نبيع معلوماتك الشخصية أو نتاجر بها أو نؤجرها لأطراف ثالثة. قد نشارك بياناتك مع مزودي الخدمة الموثوق بهم الذين يساعدوننا في تشغيل أعمالنا، شريطة موافقتهم على الحفاظ على سرية هذه المعلومات.' },
+          { title: '٤. أمان البيانات', content: 'نطبق تدابير تقنية وتنظيمية مناسبة لحماية بياناتك الشخصية من الوصول غير المصرح به أو التعديل أو الإفصاح أو الإتلاف.' },
+          { title: '٥. ملفات تعريف الارتباط', content: 'قد يستخدم موقعنا ملفات تعريف الارتباط لتحسين تجربة التصفح. يمكنك اختيار تعطيل ملفات تعريف الارتباط من خلال إعدادات المتصفح، وإن كان ذلك قد يؤثر على بعض الوظائف.' },
+          { title: '٦. حقوقك', content: 'يحق لك الوصول إلى معلوماتك الشخصية أو تصحيحها أو حذفها في أي وقت. لممارسة هذه الحقوق، يرجى التواصل معنا.' },
+          { title: '٧. التواصل', content: 'إذا كان لديك أسئلة حول سياسة الخصوصية هذه، يرجى التواصل معنا عبر البريد الإلكتروني أو الهاتف.' },
+        ],
+      },
+    };
+    db.prepare("INSERT INTO page_content (slug, title, content) VALUES (?, ?, ?)").run(
+      'privacy', 'Privacy Policy', JSON.stringify(privacyContent)
+    );
+    console.log('Inserted privacy page content');
+  }
 }
 
 function seedCategories() {
