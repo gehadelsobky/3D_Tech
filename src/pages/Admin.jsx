@@ -758,6 +758,7 @@ export default function Admin() {
   // ==================== LAYOUT (HEADER & FOOTER) STATE ====================
   const [layoutEditing, setLayoutEditing] = useState(false);
   const [layoutForm, setLayoutForm] = useState(null);
+  const [layoutFormAr, setLayoutFormAr] = useState(null);
   const [layoutSaving, setLayoutSaving] = useState(false);
   const [layoutError, setLayoutError] = useState('');
   const [layoutSuccess, setLayoutSuccess] = useState('');
@@ -765,21 +766,30 @@ export default function Admin() {
   const { global: globalContent } = usePageContent();
 
   const startEditLayout = () => {
+    // Use raw page data so we always get the _ar section regardless of current language
+    const rawGlobal = allPages['global'] || {};
+    const { _ar: existingAr, ...enGlobal } = rawGlobal;
     setLayoutForm({
-      companyName: globalContent.companyName || '3DTech',
-      tagline: globalContent.tagline || '',
-      logoUrl: globalContent.logoUrl || '/logo.jpeg',
-      email: globalContent.email || '',
-      phone1: globalContent.phone1 || '',
-      phone2: globalContent.phone2 || '',
-      location: globalContent.location || 'Cairo, Egypt',
-      whyUs: globalContent.whyUs || ['Free design mockup', '24-hour quote turnaround', 'No hidden fees', 'Bulk order discounts', 'Quality guarantee'],
-      footerTagline: globalContent.footerTagline || globalContent.tagline || '',
-      socialFacebook: globalContent.socialFacebook || '',
-      socialInstagram: globalContent.socialInstagram || '',
-      socialLinkedin: globalContent.socialLinkedin || '',
-      socialTwitter: globalContent.socialTwitter || '',
-      headerCta: globalContent.headerCta || 'Request Quote',
+      companyName: enGlobal.companyName || '3DTech',
+      tagline: enGlobal.tagline || '',
+      logoUrl: enGlobal.logoUrl || '/logo.jpeg',
+      email: enGlobal.email || '',
+      phone1: enGlobal.phone1 || '',
+      phone2: enGlobal.phone2 || '',
+      location: enGlobal.location || 'Cairo, Egypt',
+      whyUs: enGlobal.whyUs || ['Free design mockup', '24-hour quote turnaround', 'No hidden fees', 'Bulk order discounts', 'Quality guarantee'],
+      footerTagline: enGlobal.footerTagline || enGlobal.tagline || '',
+      socialFacebook: enGlobal.socialFacebook || '',
+      socialInstagram: enGlobal.socialInstagram || '',
+      socialLinkedin: enGlobal.socialLinkedin || '',
+      socialTwitter: enGlobal.socialTwitter || '',
+      headerCta: enGlobal.headerCta || 'Request Quote',
+    });
+    setLayoutFormAr({
+      tagline: existingAr?.tagline || '',
+      location: existingAr?.location || '',
+      headerCta: existingAr?.headerCta || '',
+      whyUs: existingAr?.whyUs || [],
     });
     setLayoutEditing(true);
     setLayoutError('');
@@ -789,6 +799,7 @@ export default function Admin() {
   const cancelLayout = () => {
     setLayoutEditing(false);
     setLayoutForm(null);
+    setLayoutFormAr(null);
     setLayoutError('');
   };
 
@@ -797,7 +808,12 @@ export default function Admin() {
     setLayoutError('');
     setLayoutSuccess('');
     try {
-      const merged = { ...globalContent, ...layoutForm };
+      // Use raw global data to preserve all existing fields and _ar correctly
+      const rawGlobal = allPages['global'] || {};
+      const { _ar: existingAr, ...enRawGlobal } = rawGlobal;
+      // Merge existing _ar with the Arabic fields we're editing (others are preserved)
+      const mergedAr = { ...(existingAr || {}), ...(layoutFormAr || {}) };
+      const merged = { ...enRawGlobal, ...layoutForm, _ar: mergedAr };
       await updatePage('global', merged);
       await refreshPages();
       setLayoutEditing(false);
@@ -3177,6 +3193,73 @@ export default function Admin() {
                     </div>
                   ))}
                   <button onClick={() => addLayoutListItem('whyUs')} className={addBtn}>+ Add Item</button>
+                </div>
+
+                {/* Arabic Content */}
+                <div className="mb-8">
+                  <details className="border border-amber-200 rounded-lg bg-amber-50/50">
+                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-amber-800 select-none">
+                      🌐 المحتوى العربي (Arabic Content)
+                    </summary>
+                    <div className="p-4 space-y-4 border-t border-amber-200" dir="rtl">
+                      <p className="text-xs text-amber-700 bg-amber-100 p-2 rounded-lg">
+                        الحقول الفارغة ستعرض النص الإنجليزي كبديل تلقائياً
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">زر الطلب (Header CTA)</label>
+                          <input
+                            type="text"
+                            value={layoutFormAr?.headerCta || ''}
+                            onChange={(e) => setLayoutFormAr(prev => ({ ...prev, headerCta: e.target.value }))}
+                            className={'w-full ' + inputClass}
+                            placeholder="مثال: طلب عرض سعر"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">الموقع (Location)</label>
+                          <input
+                            type="text"
+                            value={layoutFormAr?.location || ''}
+                            onChange={(e) => setLayoutFormAr(prev => ({ ...prev, location: e.target.value }))}
+                            className={'w-full ' + inputClass}
+                            placeholder="مثال: القاهرة، مصر"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">شعار الفوتر (Tagline)</label>
+                        <textarea
+                          value={layoutFormAr?.tagline || ''}
+                          onChange={(e) => setLayoutFormAr(prev => ({ ...prev, tagline: e.target.value }))}
+                          rows={2}
+                          className={'w-full resize-none ' + inputClass}
+                          placeholder="وصف قصير للشركة يظهر في الفوتر"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-2">لماذا نحن (Why Us)</label>
+                        {(layoutForm?.whyUs || []).map((item, i) => (
+                          <div key={i} className="flex gap-2 mb-2 items-center">
+                            <span className="text-[10px] text-gray-400 shrink-0 max-w-36 truncate" title={item}>{item || '—'}</span>
+                            <input
+                              type="text"
+                              value={(layoutFormAr?.whyUs || [])[i] || ''}
+                              onChange={(e) => {
+                                setLayoutFormAr(prev => {
+                                  const arr = (layoutForm?.whyUs || []).map((_, j) => (prev?.whyUs || [])[j] || '');
+                                  arr[i] = e.target.value;
+                                  return { ...prev, whyUs: arr };
+                                });
+                              }}
+                              className={'flex-1 ' + inputClass}
+                              placeholder="الترجمة العربية"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
                 {/* Actions */}
