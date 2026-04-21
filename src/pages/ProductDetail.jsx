@@ -36,7 +36,7 @@ function Lightbox({ images, startIndex, onClose }) {
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer border-none"
+        className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer border-none"
         aria-label="Close"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,14 +46,14 @@ function Lightbox({ images, startIndex, onClose }) {
 
       {/* Counter */}
       {images.length > 1 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-white/70 text-sm font-medium">
           {current + 1} / {images.length}
         </div>
       )}
 
-      {/* Main image */}
+      {/* Main image — z-0 so buttons above it */}
       <div
-        className="relative flex items-center justify-center w-full h-full px-16"
+        className="relative z-0 flex items-center justify-center w-full h-full px-16"
         onClick={(e) => e.stopPropagation()}
       >
         <img
@@ -69,7 +69,7 @@ function Lightbox({ images, startIndex, onClose }) {
         <>
           <button
             onClick={(e) => { e.stopPropagation(); prev(); }}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer border-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer border-none"
             aria-label="Previous"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -78,7 +78,7 @@ function Lightbox({ images, startIndex, onClose }) {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); next(); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer border-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer border-none"
             aria-label="Next"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,7 +91,7 @@ function Lightbox({ images, startIndex, onClose }) {
       {/* Thumbnail strip */}
       {images.length > 1 && (
         <div
-          className="absolute bottom-4 flex gap-2 px-4"
+          className="absolute bottom-4 z-10 flex gap-2 px-4"
           onClick={(e) => e.stopPropagation()}
         >
           {images.map((img, i) => (
