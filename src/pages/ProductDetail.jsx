@@ -29,8 +29,8 @@ function Lightbox({ images, startIndex, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.93)' }}
+      className="fixed inset-0 flex flex-col items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.93)', zIndex: 9999 }}
       onClick={onClose}
     >
       {/* Close button */}
