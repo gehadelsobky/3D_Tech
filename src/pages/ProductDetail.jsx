@@ -152,9 +152,12 @@ export default function ProductDetail() {
 
             {/* CTA */}
             <Link
-              to={`/contact?product=${encodeURIComponent(product.name)}`}
-              className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors no-underline"
+              to={`/request/${product.id}`}
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors no-underline"
             >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
               {t('productDetail.requestItem')}
             </Link>
           </div>

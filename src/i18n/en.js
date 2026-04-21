@@ -50,6 +50,25 @@ export default {
     requestItem: 'Request This Item',
   },
 
+  request: {
+    title: 'Request This Item',
+    subtitle: "Fill in your details and we'll get back to you within 24 hours with a custom quote.",
+    backToProduct: 'Back to Product',
+    productDetails: 'Product Details',
+    yourDetails: 'Your Details',
+    quantity: 'Quantity',
+    quantityPlaceholder: 'e.g. 50 units',
+    deliveryDate: 'Preferred Delivery Date',
+    notes: 'Additional Notes',
+    notesPlaceholder: 'Any branding requirements, special requests, or questions...',
+    submit: 'Send Request',
+    submitting: 'Sending...',
+    successTitle: 'Request Sent!',
+    successMessage: "Thank you, {name}! We've received your request for {product} and will send you a custom quote within 24 hours.",
+    successBack: 'Back to Products',
+    sendAnother: 'Send Another Request',
+  },
+
   // Services Page
   services: {
     heroTitle: 'Our Services',

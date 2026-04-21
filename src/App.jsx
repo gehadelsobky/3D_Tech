@@ -15,6 +15,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 const Home = lazy(() => import('./pages/Home'));
 const Products = lazy(() => import('./pages/Products'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const RequestProduct = lazy(() => import('./pages/RequestProduct'));
 const GiftFinder = lazy(() => import('./pages/GiftFinder'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
@@ -70,6 +71,7 @@ export default function App() {
                   <Route path="/" element={<PageRoute slug="home"><Home /></PageRoute>} />
                   <Route path="/products" element={<PageRoute slug="products"><Products /></PageRoute>} />
                   <Route path="/products/:id" element={<PageRoute slug="products"><ProductDetail /></PageRoute>} />
+                  <Route path="/request/:id" element={<RequestProduct />} />
                   <Route path="/gift-finder" element={<GiftFinder />} />
                   <Route path="/services" element={<PageRoute slug="services"><Services /></PageRoute>} />
                   <Route path="/about" element={<PageRoute slug="about"><About /></PageRoute>} />

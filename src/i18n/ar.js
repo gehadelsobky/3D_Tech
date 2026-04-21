@@ -50,6 +50,25 @@ export default {
     requestItem: 'طلب هذا المنتج',
   },
 
+  request: {
+    title: 'طلب هذا المنتج',
+    subtitle: 'أدخل بياناتك وسنتواصل معك خلال 24 ساعة بعرض سعر مخصص.',
+    backToProduct: 'العودة للمنتج',
+    productDetails: 'تفاصيل المنتج',
+    yourDetails: 'بياناتك',
+    quantity: 'الكمية',
+    quantityPlaceholder: 'مثال: 50 قطعة',
+    deliveryDate: 'تاريخ التسليم المفضل',
+    notes: 'ملاحظات إضافية',
+    notesPlaceholder: 'أي متطلبات للعلامة التجارية أو طلبات خاصة أو أسئلة...',
+    submit: 'إرسال الطلب',
+    submitting: 'جارٍ الإرسال...',
+    successTitle: 'تم إرسال الطلب!',
+    successMessage: 'شكراً {name}! تلقينا طلبك لـ {product} وسنرسل لك عرض سعر مخصص خلال 24 ساعة.',
+    successBack: 'العودة للمنتجات',
+    sendAnother: 'إرسال طلب آخر',
+  },
+
   // Services Page
   services: {
     heroTitle: 'خدماتنا',
