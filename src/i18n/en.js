@@ -23,6 +23,7 @@ export default {
     whyTitle: 'Why 3DTECH?',
     howTitle: 'How We Work',
     categoriesTitle: 'Browse by Category',
+    clientsTitle: 'Trusted by leading companies',
   },
 
   // Products Page

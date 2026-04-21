@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme {
+  --animate-marquee: marquee 30s linear infinite;
+
   /* Brand Guidelines — Primary */
   --color-primary: #E1222E;
   --color-primary-dark: #870B16;
@@ -13,6 +15,11 @@
   --color-surface-dark: #f1f5f9;
   --color-text: #2B2B2B;
   --color-text-muted: #64748b;
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
 }
 
 html {

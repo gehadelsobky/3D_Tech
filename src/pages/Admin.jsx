@@ -840,6 +840,57 @@ export default function Admin() {
     list.splice(i, 1);
     return { ...prev, [key]: list };
   });
+  // ==================== CLIENTS (MARQUEE) STATE ====================
+  const [clientsForm, setClientsForm] = useState(null);
+  const [clientsEditing, setClientsEditing] = useState(false);
+  const [clientsSaving, setClientsSaving] = useState(false);
+  const [clientsError, setClientsError] = useState('');
+  const [clientsSuccess, setClientsSuccess] = useState('');
+
+  const startEditClients = () => {
+    const rawGlobal = allPages['global'] || {};
+    setClientsForm({
+      title: rawGlobal.clientsTitle || '',
+      titleAr: rawGlobal.clientsTitleAr || '',
+      items: rawGlobal.clients ? JSON.parse(JSON.stringify(rawGlobal.clients)) : [],
+    });
+    setClientsEditing(true);
+    setClientsError('');
+    setClientsSuccess('');
+  };
+  const cancelClients = () => {
+    setClientsEditing(false);
+    setClientsForm(null);
+    setClientsError('');
+  };
+  const saveClients = async () => {
+    setClientsSaving(true);
+    setClientsError('');
+    setClientsSuccess('');
+    try {
+      const rawGlobal = allPages['global'] || {};
+      await updatePage('global', {
+        ...rawGlobal,
+        clients: clientsForm.items,
+        clientsTitle: clientsForm.title,
+        clientsTitleAr: clientsForm.titleAr,
+      });
+      await refreshPages();
+      setClientsEditing(false);
+      setClientsSuccess('Client logos saved successfully');
+    } catch (err) {
+      setClientsError(err.message || 'Failed to save');
+    } finally {
+      setClientsSaving(false);
+    }
+  };
+  const addClient = () => setClientsForm(prev => ({ ...prev, items: [...(prev.items || []), { name: '', nameAr: '', logoUrl: '' }] }));
+  const removeClient = (i) => setClientsForm(prev => { const l = [...prev.items]; l.splice(i, 1); return { ...prev, items: l }; });
+  const updateClientField = (i, field, value) => setClientsForm(prev => {
+    const l = [...prev.items];
+    l[i] = { ...l[i], [field]: value };
+    return { ...prev, items: l };
+  });
 
   // ==================== CATEGORIES STATE ====================
   const [editingCat, setEditingCat] = useState(null); // category object or 'new'
@@ -1386,6 +1437,7 @@ export default function Admin() {
             hasPermission('forms.view') && { key: 'forms', label: 'Forms', badge: newSubmissionCount },
             hasPermission('pages.edit') && { key: 'blog', label: 'Blog' },
             hasPermission('pages.edit') && { key: 'layout', label: 'Header & Footer' },
+            hasPermission('pages.edit') && { key: 'clients', label: 'Client Logos' },
             hasPermission('settings.smtp') && { key: 'settings', label: 'Settings' },
             (hasPermission('api_keys.view') || hasPermission('webhooks.view')) && { key: 'integrations', label: 'Integrations' },
           ].filter(Boolean).map((tab) => (
@@ -3313,6 +3365,142 @@ export default function Admin() {
                 </div>
               </div>
             )}
+          </>
+        )}
+
+        {/* ==================== CLIENT LOGOS TAB ==================== */}
+        {activeTab === 'clients' && hasPermission('pages.edit') && (
+          <>
+            {clientsError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{clientsError}</div>}
+            {clientsSuccess && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{clientsSuccess}</div>}
+
+            <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-lg font-bold text-text">Client Logos</h2>
+                  <p className="text-sm text-text-muted mt-1">الشركات التي نظهر لوجواتها في الشريط المتحرك على الصفحة الرئيسية (بعد قسم الفئات).</p>
+                </div>
+                {!clientsEditing && <button onClick={startEditClients} className={btnPrimary}>Edit</button>}
+              </div>
+
+              {/* Preview (read mode) */}
+              {!clientsEditing && (
+                <div className="mt-5 space-y-4">
+                  {/* Title preview */}
+                  <div className="p-4 bg-surface rounded-lg border border-gray-100">
+                    <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Section Title</p>
+                    <div className="flex flex-wrap gap-4 items-center">
+                      <span className="text-sm font-semibold text-text">
+                        🇬🇧 {allPages['global']?.clientsTitle || <span className="text-text-muted italic font-normal">Trusted by leading companies (default)</span>}
+                      </span>
+                      <span className="text-sm font-semibold text-text" dir="rtl">
+                        🇸🇦 {allPages['global']?.clientsTitleAr || <span className="text-text-muted italic font-normal">يثق بنا كبار الشركات (default)</span>}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Logos preview */}
+                  {(allPages['global']?.clients || []).length === 0 ? (
+                    <p className="text-sm text-text-muted py-6 text-center border border-dashed border-gray-200 rounded-lg">
+                      No clients added yet. Click Edit to add client logos.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-3">
+                      {(allPages['global']?.clients || []).map((c, i) => (
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg border border-gray-100">
+                          {c.logoUrl && <img src={c.logoUrl} alt={c.name} className="h-7 w-auto object-contain" />}
+                          <span className="text-sm font-medium text-text">{c.name}</span>
+                          {c.nameAr && <span className="text-xs text-text-muted" dir="rtl">{c.nameAr}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Edit mode */}
+              {clientsEditing && (
+                <div className="mt-4">
+                  {/* Section title */}
+                  <div className="mb-6 pb-6 border-b border-gray-100">
+                    <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">Section Title</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Title (EN)</label>
+                        <input
+                          value={clientsForm.title}
+                          onChange={(e) => setClientsForm(prev => ({ ...prev, title: e.target.value }))}
+                          className={inputClass}
+                          placeholder="Trusted by leading companies"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-text-muted mb-1">العنوان (AR)</label>
+                        <input
+                          value={clientsForm.titleAr}
+                          onChange={(e) => setClientsForm(prev => ({ ...prev, titleAr: e.target.value }))}
+                          className={inputClass}
+                          placeholder="يثق بنا كبار الشركات"
+                          dir="rtl"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">Client Logos</h3>
+                  <p className="text-xs text-text-muted mb-4">ارفع لوجو لكل شركة، أو اتركه فارغاً لعرض الاسم كنص. الشريط يظهر فقط إذا كان هناك عميل واحد على الأقل.</p>
+
+                  {(clientsForm.items || []).map((client, i) => (
+                    <div key={i} className="flex gap-3 mb-4 p-4 bg-surface rounded-xl border border-gray-100 items-start">
+                      {/* Logo */}
+                      <div className="shrink-0 w-28">
+                        <label className="block text-xs font-medium text-text-muted mb-1">Logo</label>
+                        <ImageUploader
+                          value={client.logoUrl}
+                          onChange={(v) => updateClientField(i, 'logoUrl', v)}
+                        />
+                      </div>
+                      {/* Names */}
+                      <div className="flex-1 space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">Company Name (EN)</label>
+                          <input
+                            value={client.name}
+                            onChange={(e) => updateClientField(i, 'name', e.target.value)}
+                            className={inputClass}
+                            placeholder="e.g. Acme Corp"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-text-muted mb-1">اسم الشركة (AR)</label>
+                          <input
+                            value={client.nameAr || ''}
+                            onChange={(e) => updateClientField(i, 'nameAr', e.target.value)}
+                            className={inputClass}
+                            placeholder="مثال: شركة أكمي"
+                            dir="rtl"
+                          />
+                        </div>
+                      </div>
+                      {/* Remove */}
+                      <button
+                        onClick={() => removeClient(i)}
+                        className="shrink-0 mt-6 w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-lg"
+                        title="Remove"
+                      >&times;</button>
+                    </div>
+                  ))}
+
+                  <button onClick={addClient} className={addBtn}>+ Add Client</button>
+
+                  <div className="flex gap-2 pt-4 mt-4 border-t border-gray-100">
+                    <button onClick={saveClients} disabled={clientsSaving} className={btnPrimary}>
+                      {clientsSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button onClick={cancelClients} className={btnSecondary}>Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
 

@@ -8,10 +8,11 @@ import ProductCard from '../components/ProductCard';
 import { ProductGridSkeleton } from '../components/Skeleton';
 import FetchError from '../components/FetchError';
 import SEO from '../components/SEO';
+import ClientsMarquee from '../components/ClientsMarquee';
 
 export default function Home() {
   const { products: rawProducts, loading, error, retry } = useProducts();
-  const { content: c } = usePageContent('home');
+  const { content: c, global: g } = usePageContent('home');
   const { categories: rawCategories } = useCategories();
   const products = useLocalizedProducts(rawProducts);
   const categories = useLocalizedCategories(rawCategories);
@@ -131,6 +132,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Client Logos Marquee */}
+      <ClientsMarquee clients={g.clients || []} title={g.clientsTitle} titleAr={g.clientsTitleAr} />
 
       {/* Featured */}
       <section className="bg-white">

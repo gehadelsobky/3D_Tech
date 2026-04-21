@@ -23,6 +23,7 @@ export default {
     whyTitle: 'لماذا 3DTECH؟',
     howTitle: 'كيف نعمل',
     categoriesTitle: 'تصفح حسب الفئة',
+    clientsTitle: 'يثق بنا كبار الشركات',
   },
 
   // Products Page
