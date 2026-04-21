@@ -78,6 +78,7 @@ export default function RequestProduct() {
       await apiPost('/forms/quote-request/submit', {
         ...data,
         product: product.name,
+        formType: 'product_request',
         _hp: honeypot,
       });
       setSubmitted(true);

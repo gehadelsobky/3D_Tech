@@ -67,7 +67,7 @@ export default function Contact() {
     setSubmitting(true);
     try {
       const { honeypot, ...data } = form;
-      await apiPost('/forms/quote-request/submit', { ...data, _hp: honeypot });
+      await apiPost('/forms/quote-request/submit', { ...data, formType: 'general_quote', _hp: honeypot });
       setSubmitted(true);
     } catch (err) {
       setSubmitError(err.message || 'Failed to submit. Please try again.');

@@ -367,6 +367,7 @@ export default function Admin() {
   const [submissionsPage, setSubmissionsPage] = useState(1);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [viewingSubmission, setViewingSubmission] = useState(null); // single submission
+  const [submissionTypeFilter, setSubmissionTypeFilter] = useState('all'); // 'all' | 'product_request' | 'general_quote'
 
   const FIELD_TYPES = ['text', 'email', 'tel', 'number', 'date', 'select', 'textarea', 'checkbox'];
 
@@ -588,6 +589,7 @@ export default function Admin() {
     setViewingSubmissions(null);
     setSubmissions([]);
     setViewingSubmission(null);
+    setSubmissionTypeFilter('all');
   };
 
   // ==================== SMTP SETTINGS STATE ====================
@@ -2651,12 +2653,21 @@ export default function Admin() {
                 {viewingSubmission ? (
                   <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-text">Submission #{viewingSubmission.id}</h4>
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold text-text">Submission #{viewingSubmission.id}</h4>
+                        {viewingSubmission.data.formType === 'product_request' ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🛒 Product Request</span>
+                        ) : viewingSubmission.data.formType === 'general_quote' ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">📋 General Quote</span>
+                        ) : null}
+                      </div>
                       <button onClick={() => setViewingSubmission(null)} className={btnSecondary}>Back to List</button>
                     </div>
                     <div className="text-xs text-text-muted">Submitted: {new Date(viewingSubmission.created_at).toLocaleString()}</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {Object.entries(viewingSubmission.data).filter(([k]) => k !== '_hp').map(([key, value]) => (
+                      {Object.entries(viewingSubmission.data)
+                        .filter(([k]) => k !== '_hp' && k !== 'formType')
+                        .map(([key, value]) => (
                         <div key={key} className="bg-surface rounded-lg p-3">
                           <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide mb-1">{key}</div>
                           <div className="text-sm text-text">{value || '—'}</div>
@@ -2680,25 +2691,55 @@ export default function Admin() {
                   </div>
                 ) : (
                   <>
+                    {/* Type filter tabs */}
+                    {submissions.some(s => s.data.formType) && (
+                      <div className="flex gap-2 flex-wrap">
+                        {[
+                          { key: 'all', label: 'All' },
+                          { key: 'product_request', label: '🛒 Product Requests' },
+                          { key: 'general_quote', label: '📋 General Quotes' },
+                        ].map(({ key, label }) => (
+                          <button
+                            key={key}
+                            onClick={() => setSubmissionTypeFilter(key)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg border-none cursor-pointer transition-colors ${
+                              submissionTypeFilter === key
+                                ? 'bg-primary text-white'
+                                : 'bg-gray-100 text-text-muted hover:bg-gray-200'
+                            }`}
+                          >{label}</button>
+                        ))}
+                      </div>
+                    )}
                     {submissionsLoading ? (
                       <div className="text-center py-10 text-text-muted">Loading submissions...</div>
                     ) : submissions.length === 0 ? (
                       <div className="text-center py-10 text-text-muted">No submissions yet.</div>
                     ) : (
                       <div className="space-y-2">
-                        {submissions.map((sub) => (
+                        {submissions
+                          .filter(sub => submissionTypeFilter === 'all' || sub.data.formType === submissionTypeFilter)
+                          .map((sub) => (
                           <div key={sub.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-medium text-sm text-text truncate">{sub.data.name || sub.data.email || `#${sub.id}`}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                                  sub.status === 'new' ? 'bg-blue-100 text-blue-700' :
+                                {/* Request type badge */}
+                                {sub.data.formType === 'product_request' ? (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700 shrink-0">🛒 Product</span>
+                                ) : sub.data.formType === 'general_quote' ? (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 shrink-0">📋 Quote</span>
+                                ) : null}
+                                {/* Status badge */}
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+                                  sub.status === 'new' ? 'bg-green-100 text-green-700' :
                                   sub.status === 'read' ? 'bg-gray-100 text-gray-600' :
-                                  sub.status === 'replied' ? 'bg-green-100 text-green-700' :
+                                  sub.status === 'replied' ? 'bg-blue-100 text-blue-700' :
                                   'bg-gray-100 text-gray-500'
                                 }`}>{sub.status}</span>
                               </div>
                               <p className="text-xs text-text-muted mt-0.5 truncate">
+                                {sub.data.product && <span className="font-medium text-text-muted">{sub.data.product} · </span>}
                                 {sub.data.email && `${sub.data.email} · `}{new Date(sub.created_at).toLocaleString()}
                               </p>
                             </div>
