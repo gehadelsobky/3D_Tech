@@ -215,6 +215,16 @@ export function initDb() {
     db.exec("ALTER TABLE blog_posts ADD COLUMN content_ar TEXT NOT NULL DEFAULT ''");
   }
 
+  // ---- Migration: display order for products ----
+  // Categories have had sort_order since the first schema; products were only
+  // ever ordered by id. Backfill from id so the existing catalogue order is
+  // preserved exactly, then let the admin reorder from there.
+  const orderCols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
+  if (!orderCols.includes('sort_order')) {
+    db.exec("ALTER TABLE products ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
+    db.exec("UPDATE products SET sort_order = id");
+  }
+
   // ---- Migration: SLA tracking on form submissions ----
   const subCols = db.prepare("PRAGMA table_info(form_submissions)").all().map(c => c.name);
   if (!subCols.includes('replied_at')) {
@@ -236,6 +246,7 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
     CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+    CREATE INDEX IF NOT EXISTS idx_products_sort ON products(sort_order);
     CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
     CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
     CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);

@@ -63,15 +63,20 @@ router.put('/reorder/batch', authenticate, requirePermission('products.edit'), (
   const { order } = req.body; // [{id, sort_order}]
   if (!Array.isArray(order)) return res.status(400).json({ error: 'Invalid order data' });
 
+  const invalid = order.some(
+    (item) => typeof item?.id !== 'string' || !Number.isInteger(Number(item?.sort_order))
+  );
+  if (invalid) return res.status(400).json({ error: 'Each entry needs a string id and numeric sort_order' });
+
   const update = db.prepare('UPDATE categories SET sort_order = ? WHERE id = ?');
   const reorder = db.transaction(() => {
     for (const item of order) {
-      update.run(item.sort_order, item.id);
+      update.run(Number(item.sort_order), item.id);
     }
   });
   reorder();
 
-  const rows = db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
+  const rows = db.prepare('SELECT * FROM categories ORDER BY sort_order ASC, name ASC').all();
   res.json(rows);
 });
 

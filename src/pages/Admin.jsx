@@ -8,6 +8,7 @@ import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
 import ImageUploader from '../components/ImageUploader';
 import AnalyticsCharts from '../components/AnalyticsCharts';
+import OrderControls from '../components/OrderControls';
 
 // Response-time SLA promised in the customer-facing copy. Kept in sync with
 // server/sla.js — the API also returns slaHours so the two cannot silently drift.
@@ -53,6 +54,14 @@ function getReplyTiming(submission) {
     ms: waitingMs,
     breached: submission.status === 'new' && waitingMs > SLA_HOURS * 3600000,
   };
+}
+
+/** Returns a copy of `list` with the item at `from` moved to `to`. */
+function moveItem(list, from, to) {
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
 }
 
 // Download CSV helper
@@ -205,10 +214,39 @@ function TagPicker({ form, setForm, settings, inputClass }) {
 }
 
 export default function Admin() {
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, addProduct, updateProduct, deleteProduct, reorderProducts, retry: refreshProducts } = useProducts();
   const { user, logout, hasPermission, isSuperAdmin, changePassword, updateProfile, refreshUser } = useAuth();
   const { settings, updateSettings } = useGiftSettings();
-  const { categories, refreshCategories } = useCategories();
+  const { categories, refreshCategories, reorderCategories } = useCategories();
+
+  // ---- Display order ----
+  const [reordering, setReordering] = useState(false);
+  const [reorderError, setReorderError] = useState('');
+
+  const applyMove = useCallback(async (list, from, to, persist, rollback) => {
+    if (to < 0 || to >= list.length || from === to) return;
+    setReorderError('');
+    setReordering(true);
+    try {
+      await persist(moveItem(list, from, to));
+    } catch (err) {
+      setReorderError(err.message || 'Could not save the new order');
+      // The context moved the item optimistically; pull the stored order back
+      // so the panel never shows an order the database does not have.
+      await rollback();
+    } finally {
+      setReordering(false);
+    }
+  }, []);
+
+  const moveCategory = useCallback(
+    (from, to) => applyMove(categories, from, to, reorderCategories, refreshCategories),
+    [applyMove, categories, reorderCategories, refreshCategories]
+  );
+  const moveProduct = useCallback(
+    (from, to) => applyMove(products, from, to, reorderProducts, refreshProducts),
+    [applyMove, products, reorderProducts, refreshProducts]
+  );
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -1795,13 +1833,31 @@ export default function Admin() {
                   className={inputClass + ' max-w-xs'}
                 />
               </div>
+              {reorderError && (
+                <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{reorderError}</div>
+              )}
+              <p className="px-6 pt-3 pb-1 text-xs text-text-muted">
+                {adminProductSearch.trim()
+                  ? 'Clear the search to reorder — positions refer to the full catalogue.'
+                  : 'Products appear on the site in this order. The first four are the homepage Featured Products.'}
+              </p>
               <div className="divide-y divide-gray-100">
-                {products.filter(p => {
+                {/* Keep each product's true catalogue index: a filtered list would
+                    otherwise renumber positions and move the wrong item. */}
+                {products.map((product, index) => ({ product, index })).filter(({ product: p }) => {
                   if (!adminProductSearch.trim()) return true;
                   const q = adminProductSearch.toLowerCase();
                   return p.name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
-                }).map((product) => (
+                }).map(({ product, index }) => (
                   <div key={product.id} className="flex items-center gap-4 px-6 py-4">
+                    {hasPermission('products.edit') && (
+                      <OrderControls
+                        index={index}
+                        total={products.length}
+                        onMove={moveProduct}
+                        disabled={reordering || !!adminProductSearch.trim()}
+                      />
+                    )}
                     <img src={product.images?.[0] || 'https://images.unsplash.com/photo-1586953208270-767889fa9b0e?w=600&h=400&fit=crop'} alt={product.name} className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-text text-sm truncate">{product.name}</div>
@@ -2715,10 +2771,25 @@ export default function Admin() {
                   {hasPermission('products.create') && <button onClick={startNewCat} className={btnPrimary}>+ Add Category</button>}
                 </div>
 
+                {reorderError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{reorderError}</div>
+                )}
+                <p className="text-xs text-text-muted">
+                  Categories appear on the site in this order — top of the list shows first.
+                </p>
+
                 <div className="space-y-2">
-                  {categories.map((cat) => (
+                  {categories.map((cat, index) => (
                     <div key={cat.id} className={`bg-white rounded-xl border p-4 flex items-center justify-between ${cat.is_active ? 'border-gray-100' : 'border-orange-200 bg-orange-50/30'}`}>
                       <div className="flex items-center gap-3 flex-1">
+                        {hasPermission('products.edit') && (
+                          <OrderControls
+                            index={index}
+                            total={categories.length}
+                            onMove={moveCategory}
+                            disabled={reordering}
+                          />
+                        )}
                         <span className="text-2xl">{cat.icon}</span>
                         <div>
                           <div className="flex items-center gap-2">

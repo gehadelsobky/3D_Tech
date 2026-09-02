@@ -36,8 +36,20 @@ export function ProductProvider({ children }) {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
+  /**
+   * Persist a new catalogue order. Takes the products already in their target
+   * order and renumbers them 0..n-1 so deletes never leave gaps behind.
+   */
+  const reorderProducts = useCallback(async (ordered) => {
+    const payload = ordered.map((p, i) => ({ id: p.id, sort_order: i }));
+    setProducts(ordered);              // optimistic — the list is already sorted
+    const saved = await apiPut('/products/reorder/batch', { order: payload });
+    setProducts(saved);
+    return saved;
+  }, []);
+
   return (
-    <ProductContext.Provider value={{ products, loading, error, retry: fetchProducts, addProduct, updateProduct, deleteProduct }}>
+    <ProductContext.Provider value={{ products, loading, error, retry: fetchProducts, addProduct, updateProduct, deleteProduct, reorderProducts }}>
       {children}
     </ProductContext.Provider>
   );

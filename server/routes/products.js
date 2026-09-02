@@ -29,12 +29,14 @@ function rowToProduct(row) {
     tags: JSON.parse(row.tags),
     notes: row.notes,
     notesAr: row.notes_ar || '',
+    sortOrder: row.sort_order,
   };
 }
 
 // GET /api/products
 router.get('/', (req, res) => {
-  const rows = db.prepare('SELECT * FROM products ORDER BY id').all();
+  // Display order is admin-controlled; id is only the tiebreaker.
+  const rows = db.prepare('SELECT * FROM products ORDER BY sort_order ASC, id ASC').all();
   res.json(rows.map(rowToProduct));
 });
 
@@ -50,9 +52,13 @@ router.get('/:id', (req, res) => {
 // POST /api/products (admin only)
 router.post('/', authenticate, requirePermission('products.create'), (req, res) => {
   const data = req.body;
+  // A new product lands at the end of the catalogue rather than jumping to the
+  // front, so adding one never silently reshuffles what visitors already see.
+  const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM products').get();
+  const sortOrder = (maxOrder.max ?? -1) + 1;
   const result = db.prepare(`
-    INSERT INTO products (name, name_ar, category, images, description, description_ar, features, features_ar, branding_options, branding_options_ar, moq, lead_time, lead_time_ar, price_range, price_range_ar, price_min, price_max, lead_days, tags, notes, notes_ar)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO products (name, name_ar, category, images, description, description_ar, features, features_ar, branding_options, branding_options_ar, moq, lead_time, lead_time_ar, price_range, price_range_ar, price_min, price_max, lead_days, tags, notes, notes_ar, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     data.name || '',
     data.nameAr || '',
@@ -74,7 +80,8 @@ router.post('/', authenticate, requirePermission('products.create'), (req, res) 
     data.leadDays ?? null,
     JSON.stringify(data.tags || []),
     data.notes || '',
-    data.notesAr || ''
+    data.notesAr || '',
+    sortOrder
   );
 
   const created = db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid);
@@ -128,6 +135,26 @@ router.put('/:id', authenticate, requirePermission('products.edit'), (req, res) 
   const product = rowToProduct(updated);
   emitEvent('product.updated', product);
   res.json(product);
+});
+
+// PUT /api/products/reorder/batch — persist a new catalogue order
+// Two path segments, so this never collides with PUT /:id above.
+router.put('/reorder/batch', authenticate, requirePermission('products.edit'), (req, res) => {
+  const { order } = req.body; // [{ id, sort_order }]
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'Invalid order data' });
+
+  const invalid = order.some(
+    (item) => !Number.isInteger(Number(item?.id)) || !Number.isInteger(Number(item?.sort_order))
+  );
+  if (invalid) return res.status(400).json({ error: 'Each entry needs a numeric id and sort_order' });
+
+  const update = db.prepare('UPDATE products SET sort_order = ? WHERE id = ?');
+  db.transaction(() => {
+    for (const item of order) update.run(Number(item.sort_order), Number(item.id));
+  })();
+
+  const rows = db.prepare('SELECT * FROM products ORDER BY sort_order ASC, id ASC').all();
+  res.json(rows.map(rowToProduct));
 });
 
 // DELETE /api/products/:id (admin only)

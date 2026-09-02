@@ -126,6 +126,14 @@ Public routes: `/` · `/products` · `/products/:id` · `/request/:id` ·
   and internal notes — plus machine-readable `price_min`, `price_max`,
   `lead_days` used by the Gift Finder.
 - **FR-2.3** Products are browsable with search and category filtering.
+- **FR-2.5** **Display order is admin-controlled.** Both categories and products
+  carry a `sort_order`; the public API returns them in that order and the panel
+  reorders them with up/down arrows plus a typed position box. Ordering is a
+  single global sequence per list — filtering by category preserves the relative
+  order rather than needing a second ordering scheme. The homepage Featured
+  Products are simply the first four in catalogue order, so the same control
+  chooses them. A new product or category is appended to the end, never inserted
+  at the front. Saving renumbers the whole list from 0, so deletes leave no gaps.
 - **FR-2.4** **No prices are transacted.** `price_range` is indicative copy
   only; every purchase path ends in a quote request.
 
