@@ -26,4 +26,15 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // The Express server and its cron jobs run on Node, not in the browser.
+    files: ['server/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      // Server modules export helpers, not React components.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

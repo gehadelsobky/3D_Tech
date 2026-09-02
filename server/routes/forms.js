@@ -7,6 +7,10 @@ import { emitEvent } from '../webhookEmitter.js';
 
 const router = Router();
 
+// The workflow states the admin panel offers. Anything else is rejected so a
+// bad value cannot slip past the reply-time tracking below.
+const SUBMISSION_STATUSES = ['new', 'read', 'replied', 'archived'];
+
 // Helper: check if request has a valid admin token (without blocking public access)
 function isAuthenticated(req) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -161,10 +165,26 @@ router.patch('/submissions/:id', authenticate, requirePermission('forms.edit'), 
   const { id } = req.params;
   const { status, notes } = req.body;
 
-  const existing = db.prepare('SELECT id FROM form_submissions WHERE id = ?').get(id);
+  if (status && !SUBMISSION_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `Status must be one of: ${SUBMISSION_STATUSES.join(', ')}` });
+  }
+
+  const existing = db.prepare('SELECT id, replied_at FROM form_submissions WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Submission not found' });
 
-  if (status) db.prepare('UPDATE form_submissions SET status = ? WHERE id = ?').run(status, id);
+  if (status) {
+    db.prepare('UPDATE form_submissions SET status = ? WHERE id = ?').run(status, id);
+
+    // Stamp the reply time the first time this is answered. Never overwritten,
+    // so moving a submission back and forth keeps the original response time.
+    if (status === 'replied' && !existing.replied_at) {
+      db.prepare("UPDATE form_submissions SET replied_at = datetime('now') WHERE id = ?").run(id);
+    }
+    // Once it leaves 'new' there is nothing left to chase.
+    if (status !== 'new') {
+      db.prepare('UPDATE form_submissions SET sla_alert_sent = 1 WHERE id = ?').run(id);
+    }
+  }
   if (notes !== undefined) db.prepare('UPDATE form_submissions SET notes = ? WHERE id = ?').run(notes, id);
 
   const updated = db.prepare('SELECT * FROM form_submissions WHERE id = ?').get(id);

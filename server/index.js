@@ -21,6 +21,7 @@ import exportRoutes from './routes/export.js';
 import backupRoutes from './routes/backup.js';
 import apiKeyRoutes from './routes/api-keys.js';
 import webhookRoutes from './routes/webhooks.js';
+import { SLA_HOURS } from './sla.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -145,6 +146,12 @@ app.get('/api/dashboard/stats', authenticate, (req, res) => {
     const totalSubmissions = db.prepare('SELECT COUNT(*) as count FROM form_submissions').get().count;
     const newSubmissions = db.prepare("SELECT COUNT(*) as count FROM form_submissions WHERE status = 'new'").get().count;
 
+    // Still unanswered past the promised turnaround.
+    const overdueSubmissions = db.prepare(
+      `SELECT COUNT(*) as count FROM form_submissions
+       WHERE status = 'new' AND created_at <= datetime('now', ?)`
+    ).get(`-${SLA_HOURS} hours`).count;
+
     // Recent submissions (last 5)
     const recentSubmissions = db.prepare(`
       SELECT fs.id, fs.data, fs.status, fs.created_at, fd.name as form_name
@@ -163,6 +170,8 @@ app.get('/api/dashboard/stats', authenticate, (req, res) => {
       totalForms,
       totalSubmissions,
       newSubmissions,
+      overdueSubmissions,
+      slaHours: SLA_HOURS,
       recentSubmissions,
       recentProducts,
     });
@@ -211,7 +220,41 @@ app.get('/api/dashboard/analytics', authenticate, (req, res) => {
       ORDER BY mentions DESC LIMIT 5
     `).all();
 
-    res.json({ monthlySubmissions, statusBreakdown, formPerformance, weeklySubmissions, topProducts });
+    // ---- Response-time SLA ----
+    // Times are compared in SQL so everything stays in the database's UTC clock.
+    const replyStats = db.prepare(
+      `SELECT
+         COUNT(*) as replied,
+         AVG((julianday(replied_at) - julianday(created_at)) * 24) as avgHours,
+         SUM(CASE WHEN (julianday(replied_at) - julianday(created_at)) * 24 <= ? THEN 1 ELSE 0 END) as withinSla
+       FROM form_submissions
+       WHERE replied_at IS NOT NULL`
+    ).get(SLA_HOURS);
+
+    const overdueCount = db.prepare(
+      `SELECT COUNT(*) as count FROM form_submissions
+       WHERE status = 'new' AND created_at <= datetime('now', ?)`
+    ).get(`-${SLA_HOURS} hours`).count;
+
+    // Submissions answered before this column existed have no replied_at and
+    // are excluded from the average rather than counted as instant replies.
+    const untracked = db.prepare(
+      "SELECT COUNT(*) as count FROM form_submissions WHERE status IN ('replied', 'archived') AND replied_at IS NULL"
+    ).get().count;
+
+    const responseTime = {
+      slaHours: SLA_HOURS,
+      repliedCount: replyStats.replied,
+      avgHours: replyStats.avgHours === null ? null : Math.round(replyStats.avgHours * 10) / 10,
+      withinSla: replyStats.withinSla || 0,
+      complianceRate: replyStats.replied
+        ? Math.round((replyStats.withinSla / replyStats.replied) * 100)
+        : null,
+      overdueCount,
+      untrackedCount: untracked,
+    };
+
+    res.json({ monthlySubmissions, statusBreakdown, formPerformance, weeklySubmissions, topProducts, responseTime });
   } catch (err) {
     console.error('Analytics error:', err.message);
     res.status(500).json({ error: 'Failed to load analytics' });

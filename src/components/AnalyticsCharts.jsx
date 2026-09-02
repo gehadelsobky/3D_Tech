@@ -40,9 +40,44 @@ export default function AnalyticsCharts() {
 
   const monthlyData = data.monthlySubmissions.map(d => ({ ...d, month: formatMonth(d.month) }));
   const statusData = data.statusBreakdown.map(d => ({ name: STATUS_LABELS[d.status] || d.status, value: d.count }));
+  const rt = data.responseTime;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      {/* Response Time vs SLA */}
+      {rt && (
+        <div className="bg-white rounded-xl border border-gray-100 p-5 lg:col-span-2">
+          <h3 className="font-semibold text-text mb-1">Response Time</h3>
+          <p className="text-xs text-text-muted mb-4">
+            Measured against the {rt.slaHours}-hour turnaround promised on the site.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Metric
+              label="Average reply time"
+              value={rt.avgHours === null ? '—' : `${rt.avgHours}h`}
+              tone={rt.avgHours !== null && rt.avgHours > rt.slaHours ? 'bad' : 'good'}
+            />
+            <Metric
+              label={`Replied within ${rt.slaHours}h`}
+              value={rt.complianceRate === null ? '—' : `${rt.complianceRate}%`}
+              tone={rt.complianceRate === null ? 'neutral' : rt.complianceRate >= 90 ? 'good' : 'bad'}
+              sub={rt.repliedCount ? `${rt.withinSla} of ${rt.repliedCount}` : null}
+            />
+            <Metric
+              label="Overdue right now"
+              value={rt.overdueCount}
+              tone={rt.overdueCount > 0 ? 'bad' : 'good'}
+              sub={rt.overdueCount > 0 ? 'still marked New' : null}
+            />
+            <Metric
+              label="Replies measured"
+              value={rt.repliedCount}
+              tone="neutral"
+              sub={rt.untrackedCount > 0 ? `${rt.untrackedCount} answered before tracking` : null}
+            />
+          </div>
+        </div>
+      )}
       {/* Monthly Submissions Trend */}
       {monthlyData.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -123,6 +158,22 @@ export default function AnalyticsCharts() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function Metric({ label, value, tone = 'neutral', sub }) {
+  const toneClass = tone === 'bad'
+    ? 'bg-red-50 text-red-700'
+    : tone === 'good'
+      ? 'bg-green-50 text-green-700'
+      : 'bg-gray-50 text-text-muted';
+
+  return (
+    <div className={`rounded-lg p-4 ${toneClass}`}>
+      <div className="text-2xl font-bold leading-tight">{value}</div>
+      <div className="text-xs font-medium mt-1">{label}</div>
+      {sub && <div className="text-[11px] opacity-75 mt-0.5">{sub}</div>}
     </div>
   );
 }

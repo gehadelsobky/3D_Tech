@@ -22,6 +22,17 @@ module.exports = {
       listen_timeout: 10000,
     },
     {
+      name: '3dtech-sla-alert',
+      script: 'server/sla-alert-cron.js',
+      node_args: '--env-file=.env',
+      cron_restart: '0 * * * *',  // Hourly — emails overdue quote requests once each
+      autorestart: false,
+      watch: false,
+      error_file: 'logs/sla-alert-error.log',
+      out_file: 'logs/sla-alert-output.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    },
+    {
       name: '3dtech-backup',
       script: 'server/backup-cron.js',
       node_args: '--env-file=.env',

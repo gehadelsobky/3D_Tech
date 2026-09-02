@@ -215,11 +215,24 @@ export function initDb() {
     db.exec("ALTER TABLE blog_posts ADD COLUMN content_ar TEXT NOT NULL DEFAULT ''");
   }
 
+  // ---- Migration: SLA tracking on form submissions ----
+  const subCols = db.prepare("PRAGMA table_info(form_submissions)").all().map(c => c.name);
+  if (!subCols.includes('replied_at')) {
+    // Stamped the first time a submission is moved to 'replied'. NULL for
+    // everything answered before this column existed.
+    db.exec("ALTER TABLE form_submissions ADD COLUMN replied_at TEXT");
+  }
+  if (!subCols.includes('sla_alert_sent')) {
+    // Guard so the overdue-alert job emails about a submission only once.
+    db.exec("ALTER TABLE form_submissions ADD COLUMN sla_alert_sent INTEGER NOT NULL DEFAULT 0");
+  }
+
   // ---- Performance indexes ----
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_form_submissions_form_id ON form_submissions(form_id);
     CREATE INDEX IF NOT EXISTS idx_form_submissions_status ON form_submissions(status);
     CREATE INDEX IF NOT EXISTS idx_form_submissions_created ON form_submissions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_form_submissions_sla ON form_submissions(status, sla_alert_sent, created_at);
     CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
     CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);

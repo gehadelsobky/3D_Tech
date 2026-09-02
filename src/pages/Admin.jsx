@@ -9,6 +9,52 @@ import { useCategories } from '../context/CategoryContext';
 import ImageUploader from '../components/ImageUploader';
 import AnalyticsCharts from '../components/AnalyticsCharts';
 
+// Response-time SLA promised in the customer-facing copy. Kept in sync with
+// server/sla.js — the API also returns slaHours so the two cannot silently drift.
+const SLA_HOURS = 24;
+
+/**
+ * SQLite stores timestamps as 'YYYY-MM-DD HH:MM:SS' in UTC. Passing that to
+ * new Date() would be read as local time, so normalise it to an ISO instant.
+ */
+function parseSqlDate(value) {
+  if (!value) return null;
+  const iso = /[TZ+]/.test(value) ? value : `${value.replace(' ', 'T')}Z`;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** Elapsed time as a compact label: "3h 12m", "2d 4h", "just now". */
+function formatDuration(ms) {
+  if (ms === null || ms === undefined || ms < 0) return '—';
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
+}
+
+/** How long a submission waited for its reply, or has been waiting so far. */
+function getReplyTiming(submission) {
+  const created = parseSqlDate(submission?.created_at);
+  if (!created) return null;
+
+  const replied = parseSqlDate(submission.replied_at);
+  if (replied) {
+    const ms = replied - created;
+    return { answered: true, ms, breached: ms > SLA_HOURS * 3600000 };
+  }
+
+  const waitingMs = Date.now() - created;
+  return {
+    answered: false,
+    ms: waitingMs,
+    breached: submission.status === 'new' && waitingMs > SLA_HOURS * 3600000,
+  };
+}
+
 // Download CSV helper
 function downloadCSV(endpoint, filename) {
   const token = localStorage.getItem('auth_token');
@@ -1476,6 +1522,7 @@ export default function Admin() {
                     { label: 'Forms', value: dashboardStats.totalForms, color: 'bg-yellow-50 text-yellow-700', icon: '📝' },
                     { label: 'Submissions', value: dashboardStats.totalSubmissions, color: 'bg-indigo-50 text-indigo-700', icon: '📩' },
                     { label: 'New', value: dashboardStats.newSubmissions, color: 'bg-red-50 text-red-700', icon: '🔔' },
+                    { label: `Overdue (${dashboardStats.slaHours ?? SLA_HOURS}h+)`, value: dashboardStats.overdueSubmissions ?? 0, color: 'bg-red-100 text-red-800', icon: '⚠️' },
                   ].map((stat) => (
                     <div key={stat.label} className={`rounded-xl p-4 ${stat.color}`}>
                       <div className="text-2xl mb-1">{stat.icon}</div>
@@ -2755,6 +2802,22 @@ export default function Admin() {
                         </div>
                       ))}
                     </div>
+                    {(() => {
+                      const timing = getReplyTiming(viewingSubmission);
+                      if (!timing) return null;
+                      const tone = timing.breached ? 'bg-red-50 text-red-700' : timing.answered ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-text-muted';
+                      return (
+                        <div className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs ${tone}`}>
+                          <span className="font-medium">
+                            {timing.answered ? 'Time to reply' : 'Waiting for reply'}
+                          </span>
+                          <span className="font-semibold">
+                            {formatDuration(timing.ms)}
+                            {timing.breached && ` · past ${SLA_HOURS}h SLA`}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                       <label className="text-xs font-medium text-text-muted">Status:</label>
                       <select
@@ -2818,10 +2881,22 @@ export default function Admin() {
                                   sub.status === 'replied' ? 'bg-blue-100 text-blue-700' :
                                   'bg-gray-100 text-gray-500'
                                 }`}>{sub.status}</span>
+                                {/* Past the promised turnaround and still unanswered */}
+                                {getReplyTiming(sub)?.breached && !getReplyTiming(sub)?.answered && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 bg-red-100 text-red-700">
+                                    ⚠ Overdue {formatDuration(getReplyTiming(sub).ms)}
+                                  </span>
+                                )}
                               </div>
                               <p className="text-xs text-text-muted mt-0.5 truncate">
                                 {sub.data.product && <span className="font-medium text-text-muted">{sub.data.product} · </span>}
-                                {sub.data.email && `${sub.data.email} · `}{new Date(sub.created_at).toLocaleString()}
+                                {sub.data.email && `${sub.data.email} · `}
+                                {parseSqlDate(sub.created_at)?.toLocaleString() || sub.created_at}
+                                {sub.replied_at && (
+                                  <span className={getReplyTiming(sub)?.breached ? 'text-red-600' : 'text-green-700'}>
+                                    {' · '}replied in {formatDuration(getReplyTiming(sub).ms)}
+                                  </span>
+                                )}
                               </p>
                             </div>
                             <div className="flex gap-2 ml-3">
