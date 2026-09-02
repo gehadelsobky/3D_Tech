@@ -17,7 +17,29 @@ function parseQuantityMax(quantity) {
   return 999999;
 }
 
-function getRecommendations(answers, products, settings) {
+// Scoring weights for the recommendation engine.
+// Budget is weighted highest on purpose: a product outside the customer's budget
+// must not outrank one inside it on secondary signals alone.
+const SCORE_WEIGHTS = {
+  budgetFit: 6,       // price sits inside the chosen budget band
+  budgetPartial: 2,   // price ceiling is under the budget ceiling
+  deliveryFit: 2,
+  audienceMatch: 2,
+  tagMatch: 1,
+  qtyFit: 1,
+};
+
+// Fallback when the admin has not set a result count in Gift Settings.
+const DEFAULT_RESULTS_COUNT = 4;
+const MAX_RESULTS_COUNT = 24;
+
+function resolveResultsCount(settings) {
+  const raw = Number(settings?.resultsCount);
+  if (!Number.isFinite(raw)) return DEFAULT_RESULTS_COUNT;
+  return Math.min(MAX_RESULTS_COUNT, Math.max(1, Math.floor(raw)));
+}
+
+function getRecommendations(answers, products, settings, resultsCount) {
   const { budget, audience, quantity, delivery, occasion } = answers;
 
   // Build maps dynamically from settings
@@ -34,42 +56,61 @@ function getRecommendations(answers, products, settings) {
 
   const scored = products.map((p) => {
     let score = 0;
-    const matchInfo = { budgetFit: false, deliveryFit: false, audienceMatch: false, tagMatches: 0, qtyFit: false };
+    const matchInfo = {
+      budgetFit: false,
+      deliveryFit: false,
+      audienceMatch: false,
+      tagMatches: 0,
+      qtyFit: false,
+      isApprox: false,
+      approxReason: null,
+    };
 
     // Budget fit
-    if (p.priceMin !== undefined) {
+    if (p.priceMin !== undefined && p.priceMin !== null) {
       if (p.priceMin >= minBudget && p.priceMin <= maxBudget) {
-        score += 3;
+        score += SCORE_WEIGHTS.budgetFit;
         matchInfo.budgetFit = true;
       } else if (p.priceMax <= maxBudget) {
-        score += 1;
+        score += SCORE_WEIGHTS.budgetPartial;
         matchInfo.budgetFit = true;
       }
     }
 
     // Delivery fit
-    if (p.leadDays !== undefined && p.leadDays <= maxDays) {
-      score += 2;
+    if (p.leadDays !== undefined && p.leadDays !== null && p.leadDays <= maxDays) {
+      score += SCORE_WEIGHTS.deliveryFit;
       matchInfo.deliveryFit = true;
     }
 
     // Audience category match
     if (preferredCats.includes(p.category)) {
-      score += 2;
+      score += SCORE_WEIGHTS.audienceMatch;
       matchInfo.audienceMatch = true;
     }
 
     // Gift type tag match
     if (p.tags) {
       const tagCount = p.tags.filter((t) => preferredTags.includes(t)).length;
-      score += tagCount;
+      score += tagCount * SCORE_WEIGHTS.tagMatch;
       matchInfo.tagMatches = tagCount;
     }
 
     // Quantity fit (dynamic parsing)
     if (p.moq <= maxQty) {
-      score += 1;
+      score += SCORE_WEIGHTS.qtyFit;
       matchInfo.qtyFit = true;
+    }
+
+    // A product that misses budget or lead time is still shown, but flagged as
+    // approximate so the customer is never silently handed something that does
+    // not meet what they asked for. Budget is the more important miss.
+    if (!matchInfo.budgetFit) {
+      matchInfo.isApprox = true;
+      matchInfo.approxReason = 'budget';
+    } else if (!matchInfo.deliveryFit) {
+      matchInfo.isApprox = true;
+      matchInfo.approxReason = 'delivery';
     }
 
     return { ...p, _score: score, _matchInfo: matchInfo };
@@ -77,7 +118,7 @@ function getRecommendations(answers, products, settings) {
 
   scored.sort((a, b) => b._score - a._score);
 
-  return scored.slice(0, 4).map(({ _score, ...p }) => p);
+  return scored.slice(0, resultsCount).map(({ _score, ...p }) => p);
 }
 
 export default function GiftFinder() {
@@ -138,7 +179,13 @@ export default function GiftFinder() {
     setShowResults(false);
   };
 
-  const recommended = showResults && settings ? getRecommendations(answers, products, settings) : [];
+  const resultsCount = resolveResultsCount(settings);
+  const recommended = showResults && settings
+    ? getRecommendations(answers, products, settings, resultsCount)
+    : [];
+  // No product satisfied both budget and lead time — hand the visitor to sales
+  // instead of letting them leave on a set of approximate results.
+  const hasStrongMatch = recommended.some((p) => !p._matchInfo.isApprox);
   const recommendedCategories = showResults
     ? [...new Set(recommended.map((p) => p.category))].map((id) => categories.find((c) => c.id === id)).filter(Boolean)
     : [];
@@ -243,13 +290,34 @@ export default function GiftFinder() {
               </div>
             )}
 
+            {/* No exact match — route the visitor to sales */}
+            {!hasStrongMatch && (
+              <div className="bg-white rounded-xl border-2 border-primary/20 p-6 mb-8 text-center">
+                <div className="text-3xl mb-3" aria-hidden="true">💬</div>
+                <h3 className="font-semibold text-text text-lg mb-2">{t('giftFinder.noMatchTitle')}</h3>
+                <p className="text-sm text-text-muted mb-5 max-w-md mx-auto">{t('giftFinder.noMatchText')}</p>
+                <Link
+                  to={`/contact?giftType=${encodeURIComponent(answers.occasion || '')}`}
+                  className="inline-block px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors no-underline"
+                >
+                  {t('giftFinder.noMatchCta')}
+                </Link>
+              </div>
+            )}
+
             {/* Recommended Products */}
-            <h3 className="font-semibold text-text mb-4">{t('giftFinder.resultsTitle')}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-              {recommended.map((product) => (
-                <ProductCard key={product.id} product={product} matchInfo={product._matchInfo} />
-              ))}
-            </div>
+            {recommended.length > 0 && (
+              <>
+                <h3 className="font-semibold text-text mb-4">
+                  {hasStrongMatch ? t('giftFinder.resultsTitle') : t('giftFinder.approxResultsTitle')}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                  {recommended.map((product) => (
+                    <ProductCard key={product.id} product={product} matchInfo={product._matchInfo} />
+                  ))}
+                </div>
+              </>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button

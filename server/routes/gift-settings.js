@@ -19,6 +19,17 @@ router.put('/', authenticate, requirePermission('gift_settings.edit'), (req, res
   if (!settings || typeof settings !== 'object') {
     return res.status(400).json({ error: 'Invalid settings data' });
   }
+
+  // resultsCount drives how many products the public Gift Finder renders —
+  // clamp it so a bad value cannot blank the results or dump the whole catalogue.
+  if (settings.resultsCount !== undefined) {
+    const count = Number(settings.resultsCount);
+    if (!Number.isFinite(count)) {
+      return res.status(400).json({ error: 'resultsCount must be a number' });
+    }
+    settings.resultsCount = Math.min(24, Math.max(1, Math.floor(count)));
+  }
+
   db.prepare('UPDATE gift_settings SET settings = ? WHERE id = 1').run(JSON.stringify(settings));
   res.json(settings);
 });

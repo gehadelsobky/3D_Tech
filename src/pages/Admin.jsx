@@ -1791,6 +1791,15 @@ export default function Admin() {
                   {hasPermission('gift_settings.edit') && <button onClick={startEditSettings} className={btnPrimary}>Edit Settings</button>}
                 </div>
 
+                {/* Results Count */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                  <h3 className="font-semibold text-text mb-1">Results Shown</h3>
+                  <p className="text-xs text-text-muted mb-3">How many products the Gift Finder recommends after the last question.</p>
+                  <span className="inline-block px-3 py-1 bg-red-50 text-primary text-sm font-semibold rounded-full">
+                    {settings.resultsCount ?? 4} products
+                  </span>
+                </div>
+
                 {/* Gift Types + Tags */}
                 <div className="bg-white rounded-xl border border-gray-100 p-6">
                   <h3 className="font-semibold text-text mb-4">Gift Types &amp; Tag Mappings</h3>
@@ -1983,6 +1992,25 @@ export default function Admin() {
                     </div>
                   ))}
                   <button onClick={() => addSimpleListItem('audienceTypes')} className={addBtn}>+ Add Audience Type</button>
+                </div>
+
+                {/* Results Count */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                  <h3 className="font-semibold text-text mb-1">Results Shown</h3>
+                  <p className="text-xs text-text-muted mb-3">How many products the Gift Finder recommends after the last question (1&ndash;24).</p>
+                  <input
+                    type="number"
+                    min="1"
+                    max="24"
+                    value={settingsForm.resultsCount ?? 4}
+                    onChange={(e) => setSettingsForm((prev) => ({ ...prev, resultsCount: e.target.value === '' ? '' : Number(e.target.value) }))}
+                    onBlur={(e) => {
+                      const n = Number(e.target.value);
+                      const clamped = Number.isFinite(n) ? Math.min(24, Math.max(1, Math.floor(n))) : 4;
+                      setSettingsForm((prev) => ({ ...prev, resultsCount: clamped }));
+                    }}
+                    className={'w-28 ' + inputClass}
+                  />
                 </div>
 
                 {/* Budget Ranges */}

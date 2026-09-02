@@ -8,6 +8,11 @@ const matchBadgeKeys = [
   { key: 'qtyFit', tKey: 'products.moq', color: 'bg-gray-100 text-gray-600' },
 ];
 
+const approxReasonKeys = {
+  budget: 'giftFinder.approxOverBudget',
+  delivery: 'giftFinder.approxSlowerDelivery',
+};
+
 export default function ProductCard({ product, matchInfo }) {
   const { t } = useLanguage();
   return (
@@ -37,8 +42,20 @@ export default function ProductCard({ product, matchInfo }) {
           <span>{product.priceRange}</span>
           <span>{t('products.moq')}: {product.moq}</span>
         </div>
+        {matchInfo?.isApprox && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-50 text-amber-700">
+              ≈ {t('giftFinder.approxBadge')}
+            </span>
+            {approxReasonKeys[matchInfo.approxReason] && (
+              <p className="text-[11px] text-amber-700/80 mt-1.5 mb-0">
+                {t(approxReasonKeys[matchInfo.approxReason])}
+              </p>
+            )}
+          </div>
+        )}
         {matchInfo && (
-          <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-gray-100">
+          <div className={`flex flex-wrap gap-1 mt-3 ${matchInfo.isApprox ? '' : 'pt-3 border-t border-gray-100'}`}>
             {matchBadgeKeys.map(({ key, tKey, color }) =>
               matchInfo[key] ? (
                 <span key={key} className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${color}`}>

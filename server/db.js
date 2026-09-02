@@ -467,6 +467,9 @@ function seedProducts() {
 
 function seedGiftSettings() {
   const defaultSettings = {
+    // How many products the Gift Finder shows. Admin-editable; the frontend
+    // clamps it to 1-24 and falls back to 4 when unset.
+    resultsCount: 4,
     giftTypes: [
       'Corporate Event',
       'Trade Show / Expo',
