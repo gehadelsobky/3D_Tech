@@ -22,6 +22,8 @@ const Contact = lazy(() => import('./pages/Contact'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const CustomPage = lazy(() => import('./pages/CustomPage'));
 const FormPage = lazy(() => import('./pages/FormPage'));
 const Services = lazy(() => import('./pages/Services'));
@@ -80,6 +82,8 @@ export default function App() {
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="/page/:slug" element={<CustomPage />} />
                   <Route path="/form/:slug" element={<FormPage />} />

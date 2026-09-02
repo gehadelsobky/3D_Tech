@@ -215,6 +215,20 @@ export function initDb() {
     db.exec("ALTER TABLE blog_posts ADD COLUMN content_ar TEXT NOT NULL DEFAULT ''");
   }
 
+  // ---- Password reset links ----
+  // Only the token's hash is stored; the token itself lives in the email.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      requested_ip TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
   // ---- Migration: display order for products ----
   // Categories have had sort_order since the first schema; products were only
   // ever ordered by id. Backfill from id so the existing catalogue order is
@@ -247,6 +261,8 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
     CREATE INDEX IF NOT EXISTS idx_products_sort ON products(sort_order);
+    CREATE INDEX IF NOT EXISTS idx_password_resets_hash ON password_resets(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
     CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
     CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
     CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);

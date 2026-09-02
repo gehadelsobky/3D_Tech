@@ -134,3 +134,53 @@ export async function sendFormNotification(formName, submissionData) {
     text: Object.entries(submissionData).filter(([k]) => k !== '_hp').map(([k, v]) => `${k}: ${v}`).join('\n'),
   });
 }
+
+export async function sendPasswordResetEmail(toEmail, username, resetUrl, expiryMinutes) {
+  const safeUser = escapeHtml(username);
+  const safeUrl = escapeHtml(resetUrl);
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#333">
+      <h2 style="color:#333">Reset your password</h2>
+      <p>Hello ${safeUser}, we received a request to reset the password for your 3DTech admin account.</p>
+      <p style="margin:28px 0">
+        <a href="${safeUrl}" style="background:#E1222E;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Reset Password</a>
+      </p>
+      <p style="color:#666;font-size:14px">
+        This link expires in <strong>${expiryMinutes} minutes</strong> and can only be used once.
+        If you did not request this, you can ignore this email — your password will not change.
+      </p>
+      <p style="color:#999;font-size:12px;word-break:break-all">If the button does not work, paste this into your browser:<br>${safeUrl}</p>
+      <hr style="border:none;border-top:1px solid #eee;margin:28px 0">
+      <div dir="rtl" style="text-align:right">
+        <h3 style="color:#333">إعادة تعيين كلمة المرور</h3>
+        <p>مرحباً ${safeUser}، تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في لوحة تحكم 3DTech.</p>
+        <p style="margin:24px 0">
+          <a href="${safeUrl}" style="background:#E1222E;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">إعادة تعيين كلمة المرور</a>
+        </p>
+        <p style="color:#666;font-size:14px">
+          ينتهي هذا الرابط خلال <strong>${expiryMinutes} دقيقة</strong> ويمكن استخدامه مرة واحدة فقط.
+          إذا لم تطلب ذلك، تجاهل هذه الرسالة ولن تتغير كلمة المرور.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text =
+    `Hello ${username},\n\n` +
+    `Reset your 3DTech admin password using this link:\n${resetUrl}\n\n` +
+    `The link expires in ${expiryMinutes} minutes and can only be used once.\n` +
+    `If you did not request this, ignore this email — your password will not change.\n\n` +
+    `— — —\n\n` +
+    `مرحباً ${username},\n\n` +
+    `أعد تعيين كلمة مرور لوحة تحكم 3DTech من هذا الرابط:\n${resetUrl}\n\n` +
+    `ينتهي الرابط خلال ${expiryMinutes} دقيقة ويُستخدم مرة واحدة فقط.\n` +
+    `إذا لم تطلب ذلك، تجاهل هذه الرسالة.`;
+
+  return sendMail({
+    to: toEmail,
+    subject: 'Reset your 3DTech password | إعادة تعيين كلمة المرور',
+    html,
+    text,
+  });
+}

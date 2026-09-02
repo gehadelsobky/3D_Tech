@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -75,6 +75,12 @@ export default function Login() {
               {submitting ? t('login.submitting') : t('login.submit')}
             </button>
           </form>
+
+          <div className="text-center mt-5">
+            <Link to="/forgot-password" className="text-sm text-primary no-underline hover:underline">
+              {t('login.forgot')}
+            </Link>
+          </div>
         </div>
       </div>
     </div>
