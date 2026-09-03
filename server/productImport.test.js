@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCsv, MAX_ROWS, MAX_CELL_LENGTH } from './productImport.js';
+import { parseCsv, MAX_ROWS, MAX_CELL_LENGTH, buildTemplate } from './productImport.js';
 import { validateRows, COLUMNS } from './productImport.js';
 
 const buf = (s) => Buffer.from(s, 'utf8');
@@ -241,4 +241,35 @@ test('reports the spreadsheet row number, counting the header as row 1', () => {
     { name: '', category: 'usb' },
   ]);
   assert.equal(r.errors[0].row, 3);
+});
+
+const SAMPLE_CATS = [{ id: 'usb', name: 'USB & Flash Drives' }, { id: 'drinkware', name: 'Drinkware' }];
+
+test('template header lists every importable column', () => {
+  const csv = buildTemplate(SAMPLE_CATS);
+  const { headers } = parseCsv(Buffer.from(csv, 'utf8'));
+  assert.deepEqual(headers, COLUMNS.map((c) => c.name));
+});
+
+test('template starts with a BOM so Excel reads Arabic correctly', () => {
+  assert.ok(buildTemplate(SAMPLE_CATS).startsWith('﻿'));
+});
+
+test('template example rows validate clean against its own rules', () => {
+  const csv = buildTemplate(SAMPLE_CATS);
+  const parsed = parseCsv(Buffer.from(csv, 'utf8'));
+  const result = validateRows(parsed.rows, parsed.headers, SAMPLE_CATS.map((c) => c.id));
+  assert.equal(result.fileError, null);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.valid.length, 2);
+});
+
+test('template uses a real category id from the caller', () => {
+  const csv = buildTemplate([{ id: 'awards', name: 'Awards' }]);
+  assert.ok(csv.includes('awards'));
+});
+
+test('template survives having no categories at all', () => {
+  const csv = buildTemplate([]);
+  assert.ok(csv.startsWith('﻿'));
 });

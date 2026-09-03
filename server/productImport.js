@@ -296,3 +296,54 @@ export function validateRows(rows, headers, categoryIds, existingNames = []) {
 
   return { fileError: null, valid, errors, warnings, unknownColumns };
 }
+
+/** Quote a value for CSV output, doubling any embedded quotes. */
+function csvCell(value) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+/**
+ * Build the downloadable template.
+ *
+ * Generated rather than shipped as a static file so the example rows always
+ * reference categories that actually exist. Two examples: one filled in
+ * completely including Arabic, one minimal, both of which the admin deletes.
+ */
+export function buildTemplate(categories = []) {
+  const first = categories[0]?.id || 'usb';
+  const second = categories[1]?.id || first;
+
+  const full = {
+    name: 'Custom USB Drive',
+    name_ar: 'فلاش مخصص',
+    category: first,
+    description: 'Custom USB with your logo, printed in any shape.',
+    description_ar: 'فلاش مخصص بشعارك، مطبوع بأي شكل.',
+    features: 'Any shape|3D printed shell|Fast delivery',
+    features_ar: 'أي شكل|غلاف مطبوع ثلاثي الأبعاد|تسليم سريع',
+    branding_options: 'Full colour print|Laser engraving',
+    branding_options_ar: 'طباعة كاملة الألوان|حفر ليزر',
+    moq: 150,
+    lead_time: '3 weeks',
+    lead_time_ar: '٣ أسابيع',
+    price_range: 'EGP 290 - EGP 350 per unit',
+    price_range_ar: '٢٩٠ - ٣٥٠ جنيه للقطعة',
+    price_min: 290,
+    price_max: 350,
+    lead_days: 21,
+    tags: 'tech|corporate|premium',
+    notes: 'Internal note, not shown on the site.',
+    notes_ar: 'ملاحظة داخلية لا تظهر على الموقع.',
+    images: '/uploads/example.png',
+  };
+
+  const minimal = { name: 'Simple Keychain', category: second, moq: 500 };
+
+  const header = COLUMNS.map((c) => c.name).join(',');
+  const body = [full, minimal]
+    .map((row) => COLUMNS.map((c) => csvCell(row[c.name] ?? '')).join(','))
+    .join('\n');
+
+  // BOM so Excel opens the Arabic columns in UTF-8, matching the export.
+  return `\uFEFF${header}\n${body}\n`;
+}
