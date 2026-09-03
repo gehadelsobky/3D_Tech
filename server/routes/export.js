@@ -4,15 +4,22 @@ import { authenticate, requirePermission } from '../middleware/auth.js';
 
 const router = Router();
 
+// Characters a spreadsheet treats as the start of a formula. A product named
+// =cmd|'/c calc'!A1 would otherwise execute when the export is opened in Excel.
+// Prefixing an apostrophe makes the cell literal text.
+const FORMULA_TRIGGERS = /^[=+\-@\t\r]/;
+
 // Helper: convert array of objects to CSV string
-function toCSV(rows, columns) {
+export function toCSV(rows, columns) {
   if (!rows.length) return columns.join(',') + '\n';
   const header = columns.join(',');
   const body = rows.map(row =>
     columns.map(col => {
       let val = row[col] ?? '';
       if (typeof val === 'object') val = JSON.stringify(val);
-      val = String(val).replace(/"/g, '""');
+      val = String(val);
+      if (FORMULA_TRIGGERS.test(val)) val = `'${val}`;
+      val = val.replace(/"/g, '""');
       return `"${val}"`;
     }).join(',')
   ).join('\n');
