@@ -8,6 +8,13 @@ import Papa from 'papaparse';
 export const MAX_ROWS = 1000;
 export const MAX_CELL_LENGTH = 5000;
 
+const UNREADABLE_ERROR = 'File could not be read as CSV. Save it as a comma-separated .csv file.';
+
+// A control character other than tab/CR/LF has no business in a CSV header;
+// its presence means the bytes are binary, not text.
+// eslint-disable-next-line no-control-regex -- intentional: detecting binary content
+const CONTROL_CHAR = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
+
 /**
  * Parse an uploaded CSV buffer.
  *
@@ -20,20 +27,34 @@ export const MAX_CELL_LENGTH = 5000;
 export function parseCsv(buffer) {
   const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
 
+  // Papaparse always emits an "UndetectableDelimiter" warning when a file
+  // has only one column (nothing to detect a delimiter from), even though it
+  // still defaults to comma and parses the file correctly - a legitimate
+  // single-column CSV raises the exact same warning as a binary file that
+  // happens to decode into one "column" of noise. So that warning cannot be
+  // used to tell the two apart; look at the actual bytes instead. A NUL byte
+  // or a U+FFFD replacement character (produced when invalid UTF-8, e.g. a
+  // zip/xlsx file misnamed .csv, gets decoded) anywhere in the text is
+  // direct evidence of binary content.
+  if (text.includes('\x00') || text.includes('\uFFFD')) {
+    return { headers: [], rows: [], error: UNREADABLE_ERROR };
+  }
+
   const result = Papa.parse(text, {
     header: true,
     skipEmptyLines: 'greedy',
     transformHeader: (h) => h.trim().toLowerCase(),
   });
 
-  // Papaparse always emits an "UndetectableDelimiter" warning when a file
-  // has only one column (nothing to detect a delimiter from) and still
-  // defaults to comma and parses correctly, so it is not treated as fatal
-  // here. A genuinely unreadable file falls through to the empty-headers or
-  // empty-rows checks below, which produce a more accurate message anyway.
   const headers = (result.meta.fields || []).filter(Boolean);
   if (!headers.length) {
     return { headers: [], rows: [], error: 'File has no header row.' };
+  }
+  // Binary content that happens to contain no NUL/replacement byte can still
+  // land here with a header full of control characters (e.g. a zip's local
+  // file signature); reject that too.
+  if (headers.some((h) => CONTROL_CHAR.test(h))) {
+    return { headers: [], rows: [], error: UNREADABLE_ERROR };
   }
 
   // A row of nothing but empty strings is padding, not data.

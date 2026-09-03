@@ -52,3 +52,25 @@ test('rejects a file with no data rows', () => {
   const r = parseCsv(buf('name,category\n'));
   assert.match(r.error, /no data rows/i);
 });
+
+test('still parses a legitimate single-column CSV', () => {
+  // This is the case that made the brief's "reject on any delimiter
+  // warning" check wrong: Papaparse can't detect a delimiter with only one
+  // column to look at, but it still parses the file correctly.
+  const r = parseCsv(buf('name\nUSB Drive\nMug\n'));
+  assert.equal(r.error, null);
+  assert.deepEqual(r.rows, [{ name: 'USB Drive' }, { name: 'Mug' }]);
+});
+
+test('rejects binary content (e.g. a spreadsheet file renamed to .csv)', () => {
+  // The local file header of a .xlsx/.zip: "PK\x03\x04" followed by more
+  // binary bytes, including NUL bytes, with a newline so it decodes into
+  // more than one line rather than one long "column".
+  const binary = Buffer.from([
+    0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00,
+    0x08, 0x00, 0x21, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x08, 0x00, 0x00, 0x00,
+  ]);
+  const r = parseCsv(binary);
+  assert.notEqual(r.error, null);
+});
