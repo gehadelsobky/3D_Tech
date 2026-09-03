@@ -27,6 +27,33 @@ test('handles escaped double quotes', () => {
   assert.equal(r.rows[0].name, 'He said "hi"');
 });
 
+test('a quoted comma is not reported as a row-level parse problem', () => {
+  const r = parseCsv(buf('name,description\n"Gift Set","Red, blue\nand green"\n'));
+  assert.equal(r.rowErrors.length, 0);
+});
+
+test('a stray unquoted comma is reported as a row-level parse problem, not silently dropped', () => {
+  // Reproduces the bug: an unquoted comma inside `description` splits the
+  // row into an extra field that papaparse puts in `__parsed_extra`, which
+  // is neither a COLUMNS name nor a header, so it was previously invisible.
+  const r = parseCsv(buf(
+    'name,category,moq,price_min,price_max,description\n'
+    + 'ZZ Probe,usb,10,5,9,A great mug, made of steel\n'
+    + 'Good,usb,10,5,9,fine\n'
+  ));
+  assert.equal(r.error, null);
+  assert.equal(r.rowErrors.length, 1);
+  assert.equal(r.rowErrors[0].index, 0);
+  assert.match(r.rowErrors[0].message, /quote/i);
+});
+
+test('an unterminated quote is reported as a row-level parse problem', () => {
+  const r = parseCsv(buf('name,category\nA,usb\n"Bad start,usb\n'));
+  assert.equal(r.error, null);
+  assert.ok(r.rowErrors.length >= 1);
+  assert.match(r.rowErrors[0].message, /quote/i);
+});
+
 test('normalises header case and surrounding spaces', () => {
   const r = parseCsv(buf(' Name , CATEGORY \nUSB,usb\n'));
   assert.deepEqual(r.headers, ['name', 'category']);
@@ -47,6 +74,13 @@ test('rejects a file with more than MAX_ROWS rows', () => {
   const body = Array.from({ length: MAX_ROWS + 1 }, (_, i) => `P${i},usb`).join('\n');
   const r = parseCsv(buf(`name,category\n${body}\n`));
   assert.match(r.error, /1000/);
+});
+
+test('accepts a file with exactly MAX_ROWS rows', () => {
+  const body = Array.from({ length: MAX_ROWS }, (_, i) => `P${i},usb`).join('\n');
+  const r = parseCsv(buf(`name,category\n${body}\n`));
+  assert.equal(r.error, null);
+  assert.equal(r.rows.length, MAX_ROWS);
 });
 
 test('rejects a file with no data rows', () => {
@@ -78,8 +112,8 @@ test('rejects binary content (e.g. a spreadsheet file renamed to .csv)', () => {
 
 const CATS = ['usb', 'drinkware', 'gift-sets'];
 const HEADERS = ['name', 'category'];
-const run = (rows, headers = HEADERS, cats = CATS, existing = []) =>
-  validateRows(rows, headers, cats, existing);
+const run = (rows, headers = HEADERS, cats = CATS, existing = [], rowMeta = {}) =>
+  validateRows(rows, headers, cats, existing, rowMeta);
 
 test('COLUMNS covers exactly the 21 importable fields', () => {
   assert.equal(COLUMNS.length, 21);
@@ -241,6 +275,44 @@ test('reports the spreadsheet row number, counting the header as row 1', () => {
     { name: '', category: 'usb' },
   ]);
   assert.equal(r.errors[0].row, 3);
+});
+
+test('a ragged row (stray unquoted comma) is reported and does not import', () => {
+  const parsed = parseCsv(buf(
+    'name,category,moq,price_min,price_max,description\n'
+    + 'ZZ Probe,usb,10,5,9,A great mug, made of steel\n'
+    + 'Good,usb,10,5,9,fine\n'
+  ));
+  const r = validateRows(parsed.rows, parsed.headers, CATS, [], {
+    lineNumbers: parsed.lineNumbers, rowErrors: parsed.rowErrors,
+  });
+  assert.equal(r.valid.length, 1);
+  assert.equal(r.valid[0].name, 'Good');
+  assert.equal(r.errors.length, 1);
+  assert.equal(r.errors[0].row, 2);
+  assert.match(r.errors[0].message, /quote/i);
+  assert.equal(r.erroredRowCount, 1);
+});
+
+test('a quoted comma still parses and imports fine', () => {
+  const parsed = parseCsv(buf('name,category,description\nGift Set,usb,"Red, and green"\n'));
+  const r = validateRows(parsed.rows, parsed.headers, CATS, [], {
+    lineNumbers: parsed.lineNumbers, rowErrors: parsed.rowErrors,
+  });
+  assert.equal(r.errors.length, 0);
+  assert.equal(r.valid.length, 1);
+  assert.equal(r.valid[0].description, 'Red, and green');
+});
+
+test('a blank line above an error does not shift the reported row number', () => {
+  // header=1, A/usb=2, blank=3, B/nope=4 — a plain index+2 would misreport
+  // the bad row (index 1 in the post-skip array) as row 3.
+  const parsed = parseCsv(buf('name,category\nA,usb\n\nB,nope\n'));
+  const r = validateRows(parsed.rows, parsed.headers, CATS, [], {
+    lineNumbers: parsed.lineNumbers, rowErrors: parsed.rowErrors,
+  });
+  assert.equal(r.errors[0].column, 'category');
+  assert.equal(r.errors[0].row, 4);
 });
 
 const SAMPLE_CATS = [{ id: 'usb', name: 'USB & Flash Drives' }, { id: 'drinkware', name: 'Drinkware' }];

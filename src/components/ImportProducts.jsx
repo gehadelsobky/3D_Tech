@@ -5,7 +5,7 @@ const fill = (template, values) =>
   Object.entries(values).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, v), template);
 
 /** Uploads a file to an endpoint that expects multipart form data. */
-async function postFile(path, file, extra = {}) {
+async function postFile(path, file, extra = {}, fallbackError = 'Request failed') {
   const body = new FormData();
   body.append('file', file);
   Object.entries(extra).forEach(([k, v]) => body.append(k, v));
@@ -15,8 +15,8 @@ async function postFile(path, file, extra = {}) {
     headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
     body,
   });
-  const data = await res.json().catch(() => ({ error: 'Request failed' }));
-  if (!res.ok) throw new Error(data.error || 'Request failed');
+  const data = await res.json().catch(() => ({ error: fallbackError }));
+  if (!res.ok) throw new Error(data.error || fallbackError);
   return data;
 }
 
@@ -35,21 +35,25 @@ export default function ImportProducts({ onImported }) {
   };
 
   const downloadTemplate = async () => {
-    const res = await fetch('/api/import/products/template', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
-    });
-    if (!res.ok) { setError('Could not download the template'); return; }
-    const url = URL.createObjectURL(await res.blob());
-    const a = document.createElement('a');
-    a.href = url; a.download = 'products-import-template.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await fetch('/api/import/products/template', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+      });
+      if (!res.ok) { setError(t('productImport.templateDownloadError')); return; }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url; a.download = 'products-import-template.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(t('productImport.templateDownloadError'));
+    }
   };
 
   const validate = async () => {
     setBusy(true); setError(''); setReport(null);
     try {
-      setReport(await postFile('/import/products/preview', file));
+      setReport(await postFile('/import/products/preview', file, {}, t('productImport.requestFailed')));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -60,7 +64,9 @@ export default function ImportProducts({ onImported }) {
   const runImport = async () => {
     setBusy(true); setError('');
     try {
-      const result = await postFile('/import/products', file, { fingerprint: report.fingerprint });
+      const result = await postFile(
+        '/import/products', file, { fingerprint: report.fingerprint }, t('productImport.requestFailed')
+      );
       setDone(result.imported);
       setReport(null);
       onImported?.();
@@ -77,7 +83,9 @@ export default function ImportProducts({ onImported }) {
   if (done !== null) {
     return (
       <div className={box}>
-        <p className="text-green-700 font-medium mb-4">{fill(t('productImport.done'), { count: done })}</p>
+        <p className="text-green-700 font-medium mb-4">
+          {fill(t(done === 1 ? 'productImport.doneOne' : 'productImport.done'), { count: done })}
+        </p>
         <button onClick={reset} className={`${btn} bg-gray-100 text-text-muted hover:bg-gray-200`}>
           {t('productImport.importAnother')}
         </button>
@@ -125,7 +133,7 @@ export default function ImportProducts({ onImported }) {
         <div className="border-t border-gray-100 pt-4 space-y-3">
           <p className="text-sm font-medium text-text">
             {fill(t('productImport.summary'), {
-              total: report.rowCount, valid: report.validCount, errors: report.errors.length,
+              total: report.rowCount, valid: report.validCount, errors: report.errorRowCount,
             })}
           </p>
 
@@ -180,7 +188,8 @@ export default function ImportProducts({ onImported }) {
               className={`${btn} bg-primary text-white hover:bg-primary-dark disabled:opacity-50`}
             >
               {busy ? t('productImport.importing')
-                    : fill(t('productImport.importAction'), { count: report.validCount })}
+                    : fill(t(report.validCount === 1 ? 'productImport.importActionOne' : 'productImport.importAction'),
+                           { count: report.validCount })}
             </button>
           </div>
         </div>

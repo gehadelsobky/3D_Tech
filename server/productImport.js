@@ -15,6 +15,56 @@ const UNREADABLE_ERROR = 'File could not be read as CSV. Save it as a comma-sepa
 // eslint-disable-next-line no-control-regex -- intentional: detecting binary content
 const CONTROL_CHAR = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
 
+// Human-facing messages for the row-level problems Papaparse can raise while
+// parsing a single row (as opposed to `error`, which rejects the whole
+// file). Each is actionable: the fix for a stray unquoted delimiter or an
+// unbalanced quote is always to wrap the cell in quotes.
+const ROW_PARSE_PROBLEMS = {
+  TooManyFields: 'This row has more fields than the header \u2014 probably a comma inside a cell that isn\u2019t quoted. Wrap that cell\u2019s value in double quotes.',
+  TooFewFields: 'This row has fewer fields than the header \u2014 check for a missing comma, or wrap a cell in double quotes if its value contains one.',
+  MissingQuotes: 'This row has a quoted cell that is never closed. Add the missing closing quote.',
+  InvalidQuotes: 'This row has a quote in the wrong place. Wrap the cell in double quotes, and write any quote inside it as two double quotes.',
+};
+
+/** Map Papaparse's `result.errors` onto the row indices of `result.data`,
+ *  keeping one message per row. A `Quotes` error can report the row it
+ *  belongs to before that row has been inserted (`row: data.length`,
+ *  per Papaparse's own source comment) \u2014 clamp to the last real index. */
+function collectRowProblems(papaErrors, dataLength) {
+  const problems = new Map();
+  for (const err of papaErrors) {
+    const message = ROW_PARSE_PROBLEMS[err.code];
+    if (!message || typeof err.row !== 'number' || dataLength === 0) continue;
+    const index = Math.min(err.row, dataLength - 1);
+    if (index < 0 || problems.has(index)) continue;
+    problems.set(index, message);
+  }
+  return problems;
+}
+
+/** Recover each row's true spreadsheet line number (header = line 1).
+ *
+ * The real parse below uses `skipEmptyLines: 'greedy'`, which drops blank
+ * lines from `result.data` entirely \u2014 so a plain `index + 2` shifts every
+ * row after a blank line down by one. This second, lenient pass keeps blank
+ * lines in place so their true line numbers can be recovered; its own
+ * parse errors are irrelevant and discarded, only row positions matter.
+ * Returns one entry per row of the real parse's `result.data`, in order. */
+function computeTrueLines(text, dataLength) {
+  const stripped = text.replace(/\r?\n$/, ''); // drop one trailing newline so
+  // it doesn't parse as a phantom final blank row.
+  const raw = Papa.parse(stripped, { header: true, skipEmptyLines: false });
+  const lines = [];
+  raw.data.forEach((row, i) => {
+    const blank = !Object.values(row).some((v) => String(v ?? '').trim() !== '');
+    if (!blank) lines.push(i + 2); // line 1 is the header
+  });
+  // Defensive: this pass uses the same "blank" definition as the real parse
+  // and should always agree with it. If it ever doesn't, fall back to plain
+  // sequential numbering rather than reporting a wrong line.
+  return lines.length === dataLength ? lines : Array.from({ length: dataLength }, (_, i) => i + 2);
+}
+
 /**
  * Parse an uploaded CSV buffer.
  *
@@ -22,10 +72,12 @@ const CONTROL_CHAR = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
  * quoted cells with a BOM, and cells may legitimately contain commas and
  * newlines. Getting RFC 4180 right by hand is a known trap.
  *
- * @returns {{ headers: string[], rows: object[], error: string|null }}
+ * @returns {{ headers: string[], rows: object[], error: string|null,
+ *             lineNumbers: number[], rowErrors: {index: number, message: string}[] }}
  */
 export function parseCsv(buffer) {
   const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
+  const empty = { headers: [], rows: [], lineNumbers: [], rowErrors: [] };
 
   // Papaparse always emits an "UndetectableDelimiter" warning when a file
   // has only one column (nothing to detect a delimiter from), even though it
@@ -37,7 +89,7 @@ export function parseCsv(buffer) {
   // zip/xlsx file misnamed .csv, gets decoded) anywhere in the text is
   // direct evidence of binary content.
   if (text.includes('\x00') || text.includes('\uFFFD')) {
-    return { headers: [], rows: [], error: UNREADABLE_ERROR };
+    return { ...empty, error: UNREADABLE_ERROR };
   }
 
   const result = Papa.parse(text, {
@@ -48,28 +100,42 @@ export function parseCsv(buffer) {
 
   const headers = (result.meta.fields || []).filter(Boolean);
   if (!headers.length) {
-    return { headers: [], rows: [], error: 'File has no header row.' };
+    return { ...empty, error: 'File has no header row.' };
   }
   // Binary content that happens to contain no NUL/replacement byte can still
   // land here with a header full of control characters (e.g. a zip's local
   // file signature); reject that too.
   if (headers.some((h) => CONTROL_CHAR.test(h))) {
-    return { headers: [], rows: [], error: UNREADABLE_ERROR };
+    return { ...empty, error: UNREADABLE_ERROR };
   }
+
+  // Row-level problems (a stray unquoted comma, an unterminated quote, ...)
+  // Papaparse noticed while parsing individual rows, and each surviving
+  // row's true spreadsheet line number (see computeTrueLines above).
+  const rowProblems = collectRowProblems(result.errors, result.data.length);
+  const trueLines = computeTrueLines(text, result.data.length);
 
   // A row of nothing but empty strings is padding, not data.
-  const rows = result.data.filter((row) =>
-    Object.values(row).some((v) => String(v ?? '').trim() !== '')
-  );
+  const rows = [];
+  const lineNumbers = [];
+  const rowErrors = [];
+  result.data.forEach((row, i) => {
+    if (!Object.values(row).some((v) => String(v ?? '').trim() !== '')) return;
+    rows.push(row);
+    lineNumbers.push(trueLines[i]);
+    if (rowProblems.has(i)) {
+      rowErrors.push({ index: rows.length - 1, message: rowProblems.get(i) });
+    }
+  });
 
   if (!rows.length) {
-    return { headers, rows: [], error: 'File has no data rows.' };
+    return { ...empty, headers, error: 'File has no data rows.' };
   }
   if (rows.length > MAX_ROWS) {
-    return { headers, rows: [], error: `File has ${rows.length} rows. The maximum is ${MAX_ROWS}.` };
+    return { ...empty, headers, error: `File has ${rows.length} rows. The maximum is ${MAX_ROWS}.` };
   }
 
-  return { headers, rows, error: null };
+  return { headers, rows, error: null, lineNumbers, rowErrors };
 }
 
 /**
@@ -144,17 +210,26 @@ function parseList(raw) {
  * @param {string[]} headers         from parseCsv
  * @param {string[]} categoryIds     existing category ids
  * @param {string[]} existingNames   lowercased product names already stored
+ * @param {object}   rowMeta         optional, from parseCsv:
+ *   { lineNumbers: number[], rowErrors: {index, message}[] } — each row's
+ *   true spreadsheet line, and any Papaparse row-level parse problem.
+ *   Falls back to plain `index + 2` numbering and no parse problems when
+ *   omitted, so callers that only have `rows`/`headers` still work.
  * @returns {{ fileError: string|null, valid: object[], errors: object[],
- *             warnings: object[], unknownColumns: string[] }}
+ *             warnings: object[], unknownColumns: string[],
+ *             erroredRowCount: number }}
  */
-export function validateRows(rows, headers, categoryIds, existingNames = []) {
+export function validateRows(rows, headers, categoryIds, existingNames = [], rowMeta = {}) {
   const missing = COLUMNS.filter((c) => c.required && !headers.includes(c.name)).map((c) => c.name);
   if (missing.length) {
     return {
       fileError: `Required column${missing.length > 1 ? 's' : ''} missing from the header: ${missing.join(', ')}.`,
-      valid: [], errors: [], warnings: [], unknownColumns: [],
+      valid: [], errors: [], warnings: [], unknownColumns: [], erroredRowCount: 0,
     };
   }
+
+  const { lineNumbers = [], rowErrors: parseProblems = [] } = rowMeta;
+  const parseProblemByIndex = new Map(parseProblems.map((p) => [p.index, p.message]));
 
   const unknownColumns = headers.filter((h) => !COLUMN_NAMES.includes(h));
   const known = new Set(existingNames.map((n) => n.toLowerCase()));
@@ -163,10 +238,26 @@ export function validateRows(rows, headers, categoryIds, existingNames = []) {
   const valid = [];
   const errors = [];
   const warnings = [];
+  let erroredRowCount = 0;
 
   rows.forEach((row, index) => {
-    // Spreadsheet numbering: the header occupies row 1.
-    const rowNumber = index + 2;
+    // Spreadsheet numbering: the header occupies row 1. Prefer the true
+    // line Papaparse reported (lineNumbers can skip ahead over blank lines
+    // that were dropped before this array was built); fall back to plain
+    // sequential numbering when the caller didn't supply it.
+    const rowNumber = lineNumbers[index] ?? (index + 2);
+
+    // A row Papaparse itself couldn't parse cleanly (an unquoted delimiter
+    // that split it into the wrong number of fields, an unterminated
+    // quote, ...) is structurally unreliable — its fields may be shifted
+    // or its data lost. Report it and skip it, rather than validating
+    // fields that don't mean what their column header says they mean.
+    if (parseProblemByIndex.has(index)) {
+      errors.push({ row: rowNumber, column: '', value: '', message: parseProblemByIndex.get(index) });
+      erroredRowCount += 1;
+      return;
+    }
+
     const rowErrors = [];
     const record = {};
 
@@ -268,6 +359,7 @@ export function validateRows(rows, headers, categoryIds, existingNames = []) {
 
     if (rowErrors.length) {
       errors.push(...rowErrors);
+      erroredRowCount += 1;
       return;
     }
 
@@ -294,7 +386,7 @@ export function validateRows(rows, headers, categoryIds, existingNames = []) {
     valid.push(record);
   });
 
-  return { fileError: null, valid, errors, warnings, unknownColumns };
+  return { fileError: null, valid, errors, warnings, unknownColumns, erroredRowCount };
 }
 
 /** Quote a value for CSV output, doubling any embedded quotes. */

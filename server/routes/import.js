@@ -48,7 +48,10 @@ const existingNames = () => db.prepare('SELECT name FROM products').all().map((p
 function inspect(buffer) {
   const parsed = parseCsv(buffer);
   if (parsed.error) return { fileError: parsed.error };
-  const result = validateRows(parsed.rows, parsed.headers, categoryIds(), existingNames());
+  const result = validateRows(parsed.rows, parsed.headers, categoryIds(), existingNames(), {
+    lineNumbers: parsed.lineNumbers,
+    rowErrors: parsed.rowErrors,
+  });
   if (result.fileError) return { fileError: result.fileError };
   return { ...result, rowCount: parsed.rows.length };
 }
@@ -71,6 +74,7 @@ router.post('/products/preview', authenticate, requirePermission('products.creat
   res.json({
     rowCount: result.rowCount,
     validCount: result.valid.length,
+    errorRowCount: result.erroredRowCount,
     errors: result.errors,
     warnings: result.warnings,
     unknownColumns: result.unknownColumns,
