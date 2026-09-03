@@ -18,9 +18,16 @@ export function authenticate(req, res, next) {
     const payload = jwt.verify(token, JWT_SECRET);
 
     // Verify user still exists in database (handles deleted users with active tokens)
-    const userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(payload.id);
-    if (!userExists) {
+    const account = db.prepare('SELECT id, token_version FROM users WHERE id = ?').get(payload.id);
+    if (!account) {
       return res.status(401).json({ error: 'User no longer exists' });
+    }
+
+    // Reject sessions issued before the password last changed. Tokens minted
+    // before this column existed carry no `tv`; treating that as 0 matches the
+    // default so a deploy does not sign everybody out.
+    if ((payload.tv ?? 0) !== account.token_version) {
+      return res.status(401).json({ error: 'Session ended because the password was changed. Please sign in again.' });
     }
 
     // Enrich with current role + permissions from DB
@@ -45,6 +52,17 @@ export function authenticate(req, res, next) {
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
+}
+
+/**
+ * Invalidate every session for a user by moving their token version forward.
+ * Call this from EVERY path that changes a password — the check in
+ * authenticate() is only as good as the places that bump this.
+ * Returns the new version so a caller can immediately mint a replacement token.
+ */
+export function bumpTokenVersion(userId) {
+  db.prepare('UPDATE users SET token_version = token_version + 1 WHERE id = ?').run(userId);
+  return db.prepare('SELECT token_version FROM users WHERE id = ?').get(userId).token_version;
 }
 
 export function requirePermission(...permissions) {

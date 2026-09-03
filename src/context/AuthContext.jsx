@@ -35,7 +35,10 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   const changePassword = async (currentPassword, newPassword) => {
-    await apiPut('/auth/password', { currentPassword, newPassword });
+    // Changing the password ends every other session. The API returns a fresh
+    // token for this one — store it, or the next request signs us out too.
+    const { token } = await apiPut('/auth/password', { currentPassword, newPassword });
+    if (token) localStorage.setItem('auth_token', token);
   };
 
   const updateProfile = async (data) => {

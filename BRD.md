@@ -248,6 +248,43 @@ signed-in role holds the matching permission.
 | Settings | `settings.smtp` | SMTP config + test connection + test email; backups |
 | Integrations | `api_keys.view` or `webhooks.view` | API keys and webhooks |
 
+### FR-6.5 Password reset
+Approved 2026-09-02. An admin who forgets their password recovers it by email,
+without another admin's help.
+
+- **FR-6.5.1** From the login page, an admin submits the email address on their
+  account and receives a single-use reset link.
+- **FR-6.5.2** The link **expires after 30 minutes** (`RESET_TOKEN_TTL_MINUTES`
+  in `server/passwordReset.js`) and is invalidated the moment it is used.
+  Requesting a new link kills any link already outstanding for that account.
+- **FR-6.5.3** The request endpoint answers **identically whether or not the
+  address belongs to an account** — it must not become a way to discover which
+  addresses are admins.
+- **FR-6.5.4** Only the SHA-256 hash of the token is stored. A leaked database
+  cannot be used to reset anyone's password.
+- **FR-6.5.5** Reset links are built from the configured `PUBLIC_URL`, never
+  from the request's `Host` header, which is attacker-controlled. In production
+  with `PUBLIC_URL` unset the server logs an error and declines to send.
+- **FR-6.5.6** Limits: 5 link requests per hour per IP, 10 submissions per hour.
+  Checking whether a link is still live is not counted — it sends nothing and
+  changes nothing, and counting it would lock a visitor out of their own reset.
+- **FR-6.5.7** New passwords must be at least 8 characters, matching the rest of
+  the system.
+- **FR-6.5.8** **Prerequisite:** the account must have an email address, and
+  SMTP must be configured. An admin with no email on file cannot use this route.
+- **FR-6.5.9** **Changing a password ends existing sessions.** Every account
+  carries a `token_version`; sessions are stamped with the version they were
+  issued under, and any password change moves it forward.
+  - A reset through the emailed link signs out **every** session — that is the
+    point when the reason for resetting is a suspected compromise.
+  - Changing your own password from My Account signs out every **other**
+    session; the API returns a replacement token so the person making the
+    change is not signed out of the session they are using.
+  - An admin setting another user's password signs that user out everywhere.
+    Editing their name, email, or role does **not**.
+  - Sessions issued before this existed carry no version and are treated as
+    version 0, so deploying does not sign everyone out.
+
 ### FR-7 Form builder
 Admins define arbitrary forms — field name, label, type
 (`text`/`email`/`tel`/`select`/`date`/`textarea`), required flag, placeholder,
@@ -306,6 +343,9 @@ This is a **first-class requirement**, not a translation layer bolted on.
   per 15 min**, **10 form submissions per 15 min**.
 - CORS restricted by `CORS_ORIGINS` in production.
 - 1 MB request body cap. HTML sanitised with DOMPurify.
+- Password reset tokens are 256-bit, stored hashed, single-use, and expire in
+  30 minutes. Changing a password invalidates outstanding sessions through the
+  account's `token_version` (FR-6.5.9).
 - 500-level errors never leak internals to the client.
 
 ### NFR-2 Performance
@@ -414,6 +454,8 @@ These could not be determined from code. Each needs an answer from the owner.
     match and the "Talk to us" CTA fires. Either the delivery options need to
     match reality (3 weeks / 1 month / 1 month+), or the products' `lead_days`
     values are stale and need updating. **Business decision required.**
+4c. ~~**Session invalidation after a password reset.**~~ **RESOLVED
+    2026-09-03:** implemented via `token_version` on the account. See FR-6.5.9.
 5. **Marketing claims.** Are 500+ projects / 50+ clients / 10+ printers current
    and defensible? They are static content today and will go stale.
 6. **Arabic coverage.** Is a fully-translated Arabic catalogue required, or is

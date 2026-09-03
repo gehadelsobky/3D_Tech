@@ -92,6 +92,33 @@ const loginLimiter = rateLimit({
 });
 app.use('/api/auth/login', loginLimiter);
 
+// Password reset — deliberately tighter than login. Each request sends a real
+// email, so an open endpoint is both an account-enumeration probe and a way to
+// use the server to spam somebody's inbox.
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset requests. Please try again later.' },
+});
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
+
+// Submitting a new password gets its own, roomier budget — a rejected password
+// (too short, mistyped) must not eat into the quota for requesting a link.
+// GET on this path only checks whether a link is still live: it sends nothing
+// and changes nothing, and rate-limiting it would lock a visitor out of their
+// own reset just for opening the link a few times. The global limiter covers it.
+const resetPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'GET',
+  message: { error: 'Too many password reset attempts. Please try again later.' },
+});
+app.use('/api/auth/reset-password', resetPasswordLimiter);
+
 // Strict form submission rate limiter — 10 submissions per 15 minutes per IP
 const formSubmitLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -359,6 +386,10 @@ app.use((err, _req, res, _next) => {
 });
 
 // ---------- Security Warnings ----------
+if (process.env.NODE_ENV === 'production' && !process.env.PUBLIC_URL) {
+  console.warn('⚠️  WARNING: PUBLIC_URL is not set. Password reset emails cannot be sent — the Host header is not trusted to build reset links in production.');
+}
+
 if (!process.env.JWT_SECRET) {
   console.warn('⚠️  WARNING: JWT_SECRET is not set. A random secret was generated — tokens will not survive restarts!');
   if (process.env.NODE_ENV === 'production') {
