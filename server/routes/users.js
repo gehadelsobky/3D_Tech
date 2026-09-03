@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import db from '../db.js';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate, requirePermission, bumpTokenVersion } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -117,6 +117,13 @@ router.put('/:id', authenticate, requirePermission('users.edit'), (req, res) => 
   db.prepare('UPDATE users SET username = ?, email = ?, password_hash = ?, role_id = ?, role = ? WHERE id = ?').run(
     newUsername, newEmail, newHash, newRoleId, newRole.slug, Number(id)
   );
+
+  // Only when an admin actually set a new password — the UPDATE above rewrites
+  // the existing hash on every edit, so keying off `password` is what tells a
+  // password change apart from a rename or a role swap.
+  if (password) {
+    bumpTokenVersion(Number(id));
+  }
 
   res.json({ id: Number(id), username: newUsername, email: newEmail, role_id: newRoleId, role_name: newRole.name });
 });

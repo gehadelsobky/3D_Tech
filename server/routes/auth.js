@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
-import { JWT_SECRET, authenticate } from '../middleware/auth.js';
+import { JWT_SECRET, authenticate, bumpTokenVersion } from '../middleware/auth.js';
 import { ALL_PERMISSIONS } from '../permissions.js';
 import { sendPasswordResetEmail } from '../email.js';
 import {
@@ -13,6 +13,18 @@ import {
 } from '../passwordReset.js';
 
 const router = Router();
+
+/**
+ * Mints a session token stamped with the account's current token version, so
+ * authenticate() can tell it apart from one issued before a password change.
+ */
+function signSession(user) {
+  return jwt.sign(
+    { id: user.id, username: user.username, role_id: user.role_id, tv: user.token_version ?? 0 },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
 
 function getUserResponse(user) {
   const role = db.prepare('SELECT * FROM roles WHERE id = ?').get(user.role_id);
@@ -49,11 +61,7 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const token = jwt.sign(
-    { id: user.id, username: user.username, role_id: user.role_id },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
+  const token = signSession(user);
 
   res.json({ token, user: getUserResponse(user) });
 });
@@ -90,7 +98,12 @@ router.put('/password', authenticate, (req, res) => {
   const hash = bcrypt.hashSync(newPassword, 12);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, req.user.id);
 
-  res.json({ success: true });
+  // Every other session for this account is now dead. Hand back a fresh token
+  // so the person who just changed their own password is not signed out too.
+  const tokenVersion = bumpTokenVersion(req.user.id);
+  const token = signSession({ ...user, token_version: tokenVersion });
+
+  res.json({ success: true, token });
 });
 
 // PUT /api/auth/profile — update own email
@@ -210,6 +223,9 @@ router.post('/reset-password', (req, res) => {
     // Burn this link and every other one outstanding for the account.
     db.prepare("UPDATE password_resets SET used_at = datetime('now') WHERE user_id = ? AND used_at IS NULL")
       .run(reset.user_id);
+    // Sign out every existing session. A reset is the one moment where someone
+    // else may be holding a live token for this account — that is the point.
+    db.prepare('UPDATE users SET token_version = token_version + 1 WHERE id = ?').run(reset.user_id);
   })();
 
   console.log(`[auth] Password reset completed for user ${reset.username} (id ${reset.user_id})`);

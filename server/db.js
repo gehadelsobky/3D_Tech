@@ -171,6 +171,11 @@ export function initDb() {
   if (!cols.includes('role_id')) {
     db.exec('ALTER TABLE users ADD COLUMN role_id INTEGER');
   }
+  if (!cols.includes('token_version')) {
+    // Bumped whenever a password changes. Tokens carry the version they were
+    // issued under, so raising it invalidates every session at once.
+    db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0');
+  }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL');
 
   // ---- Migration: add hidden, is_custom, title columns to page_content if missing ----

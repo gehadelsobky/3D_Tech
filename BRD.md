@@ -272,6 +272,18 @@ without another admin's help.
   the system.
 - **FR-6.5.8** **Prerequisite:** the account must have an email address, and
   SMTP must be configured. An admin with no email on file cannot use this route.
+- **FR-6.5.9** **Changing a password ends existing sessions.** Every account
+  carries a `token_version`; sessions are stamped with the version they were
+  issued under, and any password change moves it forward.
+  - A reset through the emailed link signs out **every** session — that is the
+    point when the reason for resetting is a suspected compromise.
+  - Changing your own password from My Account signs out every **other**
+    session; the API returns a replacement token so the person making the
+    change is not signed out of the session they are using.
+  - An admin setting another user's password signs that user out everywhere.
+    Editing their name, email, or role does **not**.
+  - Sessions issued before this existed carry no version and are treated as
+    version 0, so deploying does not sign everyone out.
 
 ### FR-7 Form builder
 Admins define arbitrary forms — field name, label, type
@@ -332,8 +344,8 @@ This is a **first-class requirement**, not a translation layer bolted on.
 - CORS restricted by `CORS_ORIGINS` in production.
 - 1 MB request body cap. HTML sanitised with DOMPurify.
 - Password reset tokens are 256-bit, stored hashed, single-use, and expire in
-  30 minutes. **Known gap:** resetting a password does not invalidate sessions
-  already issued — an existing JWT stays valid for up to 24 hours. See §12.
+  30 minutes. Changing a password invalidates outstanding sessions through the
+  account's `token_version` (FR-6.5.9).
 - 500-level errors never leak internals to the client.
 
 ### NFR-2 Performance
@@ -442,13 +454,8 @@ These could not be determined from code. Each needs an answer from the owner.
     match and the "Talk to us" CTA fires. Either the delivery options need to
     match reality (3 weeks / 1 month / 1 month+), or the products' `lead_days`
     values are stale and need updating. **Business decision required.**
-4c. **Session invalidation after a password reset (NEW, unresolved).** The JWT
-    has no revocation mechanism, so a token issued before a reset stays valid
-    until it expires (24h). If the reset was prompted by a suspected
-    compromise, the attacker keeps access for that window. Closing it means
-    stamping `password_changed_at` on the user and rejecting older tokens in
-    `authenticate` — small, but it logs every session out on every reset.
-    **Business decision required.**
+4c. ~~**Session invalidation after a password reset.**~~ **RESOLVED
+    2026-09-03:** implemented via `token_version` on the account. See FR-6.5.9.
 5. **Marketing claims.** Are 500+ projects / 50+ clients / 10+ printers current
    and defensible? They are static content today and will go stale.
 6. **Arabic coverage.** Is a fully-translated Arabic catalogue required, or is
