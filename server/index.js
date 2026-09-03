@@ -26,7 +26,12 @@ import { SLA_HOURS } from './sla.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+
+// Apache is the single trusted reverse-proxy hop in production.
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '127.0.0.1';
 
 // ---------- Security Middleware ----------
 
@@ -400,6 +405,6 @@ if (!process.env.JWT_SECRET) {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`3D Tech server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`3D Tech server running on http://${HOST}:${PORT}`);
 });
