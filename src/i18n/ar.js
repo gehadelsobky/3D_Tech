@@ -291,4 +291,23 @@ export default {
     message: 'حدث خطأ غير متوقع. يرجى تحديث الصفحة.',
     refresh: 'تحديث الصفحة',
   },
+
+  productImport: {
+    button: 'استيراد CSV',
+    title: 'استيراد منتجات',
+    intro: 'ابدأ بالقالب حتى تتطابق الأعمدة.',
+    downloadTemplate: '⬇ تحميل قالب CSV',
+    chooseFile: 'اختر ملفاً',
+    validate: 'فحص الملف',
+    validating: 'جارٍ الفحص...',
+    cancel: 'إلغاء',
+    importing: 'جارٍ الاستيراد...',
+    importAction: 'استورد {count} منتج',
+    summary: '{total} صف · {valid} جاهز · {errors} فيها أخطاء',
+    unknownColumn: 'عمود غير معروف "{column}" — سيتم تجاهله',
+    previewTitle: 'أول المنتجات التي ستضاف:',
+    nothingValid: 'لم يجتز أي صف الفحص. صحح الملف وحاول مرة أخرى.',
+    done: 'تم استيراد {count} منتج.',
+    rowLabel: 'صف',
+  },
 };

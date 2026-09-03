@@ -294,4 +294,23 @@ export default {
     message: 'An unexpected error occurred. Please try refreshing the page.',
     refresh: 'Refresh Page',
   },
+
+  productImport: {
+    button: 'Import CSV',
+    title: 'Import products',
+    intro: 'Start from the template so your columns match.',
+    downloadTemplate: '⬇ Download CSV template',
+    chooseFile: 'Choose file',
+    validate: 'Validate file',
+    validating: 'Checking...',
+    cancel: 'Cancel',
+    importing: 'Importing...',
+    importAction: 'Import {count} products',
+    summary: '{total} rows · {valid} ready · {errors} with errors',
+    unknownColumn: 'Unknown column "{column}" — it will be ignored',
+    previewTitle: 'First products to be added:',
+    nothingValid: 'No row passed validation. Fix the file and try again.',
+    done: 'Imported {count} products.',
+    rowLabel: 'Row',
+  },
 };

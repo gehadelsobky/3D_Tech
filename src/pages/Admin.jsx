@@ -6,9 +6,11 @@ import { useGiftSettings } from '../context/GiftSettingsContext';
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '../lib/api';
 import { usePageContent } from '../context/PageContentContext';
 import { useCategories } from '../context/CategoryContext';
+import { useLanguage } from '../context/LanguageContext';
 import ImageUploader from '../components/ImageUploader';
 import AnalyticsCharts from '../components/AnalyticsCharts';
 import OrderControls from '../components/OrderControls';
+import ImportProducts from '../components/ImportProducts';
 
 // Response-time SLA promised in the customer-facing copy. Kept in sync with
 // server/sla.js — the API also returns slaHours so the two cannot silently drift.
@@ -218,6 +220,7 @@ export default function Admin() {
   const { user, logout, hasPermission, isSuperAdmin, changePassword, updateProfile, refreshUser } = useAuth();
   const { settings, updateSettings } = useGiftSettings();
   const { categories, refreshCategories, reorderCategories } = useCategories();
+  const { t } = useLanguage();
 
   // ---- Display order ----
   const [reordering, setReordering] = useState(false);
@@ -253,6 +256,7 @@ export default function Admin() {
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [newSubmissionCount, setNewSubmissionCount] = useState(0);
   const [adminProductSearch, setAdminProductSearch] = useState('');
+  const [showImport, setShowImport] = useState(false);
 
   // Blog state
   const [blogPosts, setBlogPosts] = useState([]);
@@ -1662,8 +1666,19 @@ export default function Admin() {
           <>
             <div className="flex justify-end gap-2 mb-4">
               <button onClick={() => downloadCSV('products', 'products.csv')} className={btnSecondary}>Export CSV</button>
+              {hasPermission('products.create') && (
+                <button onClick={() => setShowImport((v) => !v)} className={btnSecondary}>
+                  {t('productImport.button')}
+                </button>
+              )}
               {!editing && hasPermission('products.create') && <button onClick={startAdd} className={btnPrimary}>+ Add Product</button>}
             </div>
+
+            {showImport && hasPermission('products.create') && (
+              <div className="mb-6">
+                <ImportProducts onImported={() => { refreshProducts(); setShowImport(false); }} />
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
