@@ -32,7 +32,7 @@ try {
   const backupName = `backup_${timestamp}.db`;
   const backupPath = join(BACKUP_DIR, backupName);
 
-  db.backup(backupPath);
+  await db.backup(backupPath);
   db.close();
 
   console.log(`[${new Date().toISOString()}] Backup created: ${backupName}`);
