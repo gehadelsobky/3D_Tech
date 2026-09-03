@@ -309,5 +309,6 @@ export default {
     nothingValid: 'لم يجتز أي صف الفحص. صحح الملف وحاول مرة أخرى.',
     done: 'تم استيراد {count} منتج.',
     rowLabel: 'صف',
+    importAnother: 'استيراد ملف آخر',
   },
 };

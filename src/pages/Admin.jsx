@@ -1676,7 +1676,7 @@ export default function Admin() {
 
             {showImport && hasPermission('products.create') && (
               <div className="mb-6">
-                <ImportProducts onImported={() => { refreshProducts(); setShowImport(false); }} />
+                <ImportProducts onImported={refreshProducts} />
               </div>
             )}
 

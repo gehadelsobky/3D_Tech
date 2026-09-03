@@ -312,5 +312,6 @@ export default {
     nothingValid: 'No row passed validation. Fix the file and try again.',
     done: 'Imported {count} products.',
     rowLabel: 'Row',
+    importAnother: 'Import another file',
   },
 };

@@ -79,7 +79,7 @@ export default function ImportProducts({ onImported }) {
       <div className={box}>
         <p className="text-green-700 font-medium mb-4">{fill(t('productImport.done'), { count: done })}</p>
         <button onClick={reset} className={`${btn} bg-gray-100 text-text-muted hover:bg-gray-200`}>
-          {t('productImport.cancel')}
+          {t('productImport.importAnother')}
         </button>
       </div>
     );
@@ -98,21 +98,27 @@ export default function ImportProducts({ onImported }) {
 
       {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".csv,text/csv"
-          onChange={(e) => { setFile(e.target.files?.[0] || null); setReport(null); setError(''); }}
-          className="text-sm"
-        />
-        <button
-          onClick={validate}
-          disabled={!file || busy}
-          className={`${btn} bg-primary text-white hover:bg-primary-dark disabled:opacity-50`}
-        >
-          {busy && !report ? t('productImport.validating') : t('productImport.validate')}
-        </button>
+      <div>
+        <label htmlFor="import-products-file" className="block text-xs font-medium text-text-muted mb-1">
+          {t('productImport.chooseFile')}
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            id="import-products-file"
+            ref={fileInput}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(e) => { setFile(e.target.files?.[0] || null); setReport(null); setError(''); }}
+            className="text-sm"
+          />
+          <button
+            onClick={validate}
+            disabled={!file || busy}
+            className={`${btn} bg-primary text-white hover:bg-primary-dark disabled:opacity-50`}
+          >
+            {busy && !report ? t('productImport.validating') : t('productImport.validate')}
+          </button>
+        </div>
       </div>
 
       {report && (
