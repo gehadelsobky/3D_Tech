@@ -136,6 +136,16 @@ Public routes: `/` · `/products` · `/products/:id` · `/request/:id` ·
   at the front. Saving renumbers the whole list from 0, so deletes leave no gaps.
 - **FR-2.4** **No prices are transacted.** `price_range` is indicative copy
   only; every purchase path ends in a quote request.
+- **FR-2.6** **Bulk import.** Products can be created in bulk from a CSV.
+  Import is **insert-only** — it cannot modify or delete an existing product.
+  It runs in two steps: a preview parses and validates the file and writes
+  nothing, then the admin confirms and the valid rows insert in one
+  transaction. A template covering all 21 importable columns (Arabic
+  included) is generated on request so its example categories are always
+  current. Limits: 1000 rows, 5000 characters per cell, 5 MB per file.
+  Unknown columns are a warning, not a rejection. Imported products append to
+  the end of the catalogue. Import does **not** emit per-row `product.created`
+  webhooks — importing 500 products would otherwise fire 500 deliveries.
 
 ### FR-3 Gift Finder (differentiating feature)
 A 5-step wizard that recommends products. Steps, in order:
@@ -343,6 +353,8 @@ This is a **first-class requirement**, not a translation layer bolted on.
   per 15 min**, **10 form submissions per 15 min**.
 - CORS restricted by `CORS_ORIGINS` in production.
 - 1 MB request body cap. HTML sanitised with DOMPurify.
+- CSV export escapes values a spreadsheet would run as a formula; CSV import
+  rejects cells beginning with `=` or `@`.
 - Password reset tokens are 256-bit, stored hashed, single-use, and expire in
   30 minutes. Changing a password invalidates outstanding sessions through the
   account's `token_version` (FR-6.5.9).
