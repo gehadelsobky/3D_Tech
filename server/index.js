@@ -21,6 +21,7 @@ import exportRoutes from './routes/export.js';
 import backupRoutes from './routes/backup.js';
 import apiKeyRoutes from './routes/api-keys.js';
 import webhookRoutes from './routes/webhooks.js';
+import importRoutes from './routes/import.js';
 import { SLA_HOURS } from './sla.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -158,6 +159,7 @@ app.use('/api/export', exportRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/api-keys', apiKeyRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/import', importRoutes);
 
 // Dashboard stats endpoint (admin)
 import { authenticate } from './middleware/auth.js';
