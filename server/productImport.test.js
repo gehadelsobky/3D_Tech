@@ -154,6 +154,15 @@ test('parses a JSON list, so an exported file stays importable', () => {
   assert.equal(r.valid[0].tags, JSON.stringify(['premium', 'gift']));
 });
 
+test('rejects a list cell that looks like JSON but is malformed', () => {
+  // A regression to `parseList` returning `[]` on a JSON.parse failure
+  // (instead of null) would silently import an empty list here instead of
+  // erroring the row — this is the test that would catch that.
+  const r = run([{ name: 'X', category: 'usb', tags: '[not valid json' }], [...HEADERS, 'tags']);
+  assert.equal(r.errors[0].column, 'tags');
+  assert.equal(r.valid.length, 0);
+});
+
 test('accepts safe image locations', () => {
   const r = run(
     [{ name: 'X', category: 'usb', images: '/uploads/a.png|https://cdn.example.com/b.jpg' }],
